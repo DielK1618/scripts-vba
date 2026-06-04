@@ -14,14 +14,14 @@
 | `am_Core.bas` | `am_Core` | ✅ 완성 | CM_TO_POINTS 상수, DPUpdate/Event/Calculate/WB_Lock 추가 |
 | `am_Path.bas` | `am_Path` | ✅ 완성 | |
 | `am_File.bas` | `am_File` | ✅ 완성 | |
-| `am_DB.bas` | `am_DB` | ✅ 완성 | tpl_MsSQL/MySQL_Sub 미이식 |
+| `am_DB.bas` | `am_DB` | ✅ 완성 | tpl_MsSQL/MySQL_Sub/Access 이식 완료 |
 | `am_Sheet.bas` | `am_Sheet` | ✅ 완성 | 워크북/시트 조작, 백업, 시트 보호 추가 |
 | `am_Table.bas` | `am_Table` | ✅ 완성 | 테이블 CRUD/필터/정렬/검색 |
 | `am_Range.bas` | `am_Range` | ✅ 완성 | |
 | `am_Format.bas` | `am_Format` | ✅ 완성 | 조건부 서식, 유효성 검사 |
 | `am_Excel.bas` | `am_Excel` | ⬜ 스텁 | 차트/버튼/폼/도형 (미이식) |
 | `am_Utils.bas` | `am_Utils` | ⬜ 미작성 | |
-| `am_Error.bas` | `am_Error` | ⬜ 미작성 | |
+| `am_Error.bas` | `am_Error` | ✅ 완성 | HandleError / WriteLog |
 
 ### cwb_01.xlsm (`cwb/` 폴더)
 
@@ -49,10 +49,10 @@
 | `Common.cls` (SheetLock) | `am_Sheet` | ✅ 완료 |
 | `tpl_Find` | `am_Range` | ✅ 완료 |
 | `tpl_Range` | `am_Range` | ✅ 완료 |
-| `tpl_Error` | `am_Error` | ⬜ 미이식 |
-| `tpl_MsSQL` | `am_DB` | ⬜ 미이식 |
-| `tpl_MySQL_Sub` (일부) | `am_DB` | ⬜ 미이식 |
-| `tpl_Access` | `am_DB` | ⬜ 미이식 |
+| `tpl_Error` | `am_Error` | ✅ 완료 |
+| `tpl_MsSQL` | `am_DB` | ✅ 완료 |
+| `tpl_MySQL_Sub` (일부) | `am_DB` | ✅ 완료 |
+| `tpl_Access` | `am_DB` | ✅ 완료 |
 | `tpl_Array` | `am_Utils` | ⬜ 미이식 |
 | `tpl_Check` (일부) | `am_Utils` | ⬜ 미이식 |
 | `tpl_Code` (일부) | `am_Utils` | ⬜ 미이식 |
@@ -133,3 +133,5 @@
 | 2026-06-02 | am_Core 보완: CM_TO_POINTS 상수, DPUpdate/Event/Calculate/WB_Lock 추가 (Common.cls, tpl_Const 이식) |
 | 2026-06-02 | am_Range 완성: FindCellsByColor (tpl_Find), GetUsedRange (tpl_Range) 추가 |
 | 2026-06-02 | am_Sheet 보완: SheetLock/SheetUnLock 추가 (Common.cls 재설계, prv_GetUsedRange·prv_FindCellsByColor 내부 구현) |
+| 2026-06-04 | am_Error 신규 작성: HandleError / WriteLog (tpl_Error 이식, cl.* 제거, am_Core.AM_NAME·XlamPath 으로 교체) |
+| 2026-06-04 | am_DB 확장: tpl_MsSQL/MySQL_Sub/Access 이식 완료 — DelExcelRecQuery(wb 인수화), GetFields(센티널 -1), GetFieldAndType/GetFieldNameConnection(ReplaceFields·GetDbInfo 의존성 제거), CreateAccessTable/DeleteAccessTable/CreateAccessTableADOX/DeleteAccessFields 추가 |

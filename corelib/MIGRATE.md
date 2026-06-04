@@ -16,14 +16,14 @@
 ### am_Error (신규 모듈)
 | 원본 | 상태 | 비고 |
 |---|---|---|
-| `tpl_Error` | ⬜ 대기 | 공통 에러 핸들링 |
+| `tpl_Error` | ✅ 완료 | 공통 에러 핸들링 |
 
 ### am_DB
 | 원본 | 상태 | 비고 |
 |---|---|---|
-| `tpl_Access` | ⬜ 대기 | Access DB 연결/쿼리 |
-| `tpl_MsSQL` | ⬜ 대기 | MsSQL 연결/쿼리 |
-| `tpl_MySQL_Sub` | ⬜ 대기 | MySQL 보조 프로시저 |
+| `tpl_Access` | ✅ 완료 | Access DB 연결/쿼리 |
+| `tpl_MsSQL` | ✅ 완료 | MsSQL 연결/쿼리 |
+| `tpl_MySQL_Sub` | ✅ 완료 | MySQL 보조 프로시저 (CWB 종속 함수 제외) |
 
 ### am_Range
 | 원본 | 상태 | 비고 |
@@ -78,3 +78,7 @@
 | `Common.cls` (sht_Lock) | `am_Sheet` | 2026-06-02 |
 | `tpl_Table` | `am_Table` | 2026-06-02 |
 | `tpl_Formatting` | `am_Format` | 2026-06-02 |
+| `tpl_Error` | `am_Error` | 2026-06-04 |
+| `tpl_MsSQL` | `am_DB` | 2026-06-04 |
+| `tpl_MySQL_Sub` (일부) | `am_DB` | 2026-06-04 |
+| `tpl_Access` | `am_DB` | 2026-06-04 |

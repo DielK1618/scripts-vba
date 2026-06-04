@@ -1162,3 +1162,593 @@ Public Sub AutoIDs(ByVal rng As Range)
     rng.Value = Application.Transpose(arrIDs)
 
 End Sub
+
+' ══════════════════════════════════════════════════════════
+'  엑셀 DB 유틸리티
+' ══════════════════════════════════════════════════════════
+
+' 목적   : 엑셀 시트에서 A열 값이 strID 와 일치하는 행 삭제
+' 인수   : wb           - 대상 워크북
+'          strSheetName - 시트 이름
+'          strID        - 삭제 기준 A열 값
+' 예시   : DelExcelRecQuery(ThisWorkbook, "Sheet1", "001")
+Public Sub DelExcelRecQuery(ByVal wb           As Workbook, _
+                            ByVal strSheetName As String, _
+                            ByVal strID        As String)
+
+    Dim ws  As Worksheet
+    Dim rng As Range
+    Dim f   As Range
+
+    Set ws  = wb.Worksheets(strSheetName)
+    Set rng = ws.Range("A:A")
+    Set f   = rng.Find(strID, , xlValues, xlWhole)
+
+    If Not f Is Nothing Then f.EntireRow.Delete
+
+End Sub
+
+' ══════════════════════════════════════════════════════════
+'  테이블 분석
+' ══════════════════════════════════════════════════════════
+
+' 목적   : ListObject 헤더에서 색상 조건에 맞는 필드명 배열 반환
+' 인수   : lngFontColor - 글꼴 색상 필터 (-1: 전체, 0: 검정)
+'          lngBgColor   - 배경 색상 필터 (-1: 전체, 0: 검정)
+'          tbl          - 대상 ListObject (기본: ActiveSheet 첫 번째)
+' 반환   : Variant - 필드명 문자열 배열
+' 예시   : GetFields(-1, RGB(255, 0, 0), Sheet1.ListObjects(1))
+Public Function GetFields(Optional ByVal lngFontColor As Long = -1, _
+                          Optional ByVal lngBgColor   As Long = -1, _
+                          Optional ByVal tbl          As ListObject) As Variant
+
+    If tbl Is Nothing Then Set tbl = ActiveSheet.ListObjects(1)
+
+    Dim arr() As Variant
+    Dim r     As Range
+    Dim i     As Long
+
+    For Each r In tbl.HeaderRowRange
+        If lngFontColor <> -1 Then
+            If IsNull(r.Font.Color) Or r.Font.Color <> lngFontColor Then GoTo NextField
+        End If
+        If lngBgColor <> -1 Then
+            If r.Interior.Color <> lngBgColor Then GoTo NextField
+        End If
+        ReDim Preserve arr(i)
+        arr(i) = CStr(r.Value)
+        i = i + 1
+NextField:
+    Next r
+
+    GetFields = arr
+
+End Function
+
+' 목적   : 지정 필드 목록의 DB 타입명을 조회하여 [필드명, 타입명] 배열 반환
+'          GetFieldInfo 로 스키마 조회 후 arrFields 의 각 필드와 매핑
+' 인수   : arrFields - 조회할 DB 필드명 배열
+'          strType   - DB 종류
+'          strTable  - 테이블명
+'          strFile   - 파일 경로 (엑셀/엑세스)
+'          strServer / strPort / strDB / strID / strPW - 서버 접속 정보
+'          blnParens - True: 필드명에 [] 괄호 추가
+' 반환   : Variant - (0, i)=필드명, (1, i)=DB타입명
+' 예시   : GetFieldAndType(Array("Name","Age"), "엑세스", "T1", "C:\DB\main.accdb")
+Public Function GetFieldAndType(ByVal arrFields  As Variant, _
+                                ByVal strType    As String, _
+                                ByVal strTable   As String, _
+                                Optional ByVal strFile   As String, _
+                                Optional ByVal strServer As String, _
+                                Optional ByVal strPort   As String, _
+                                Optional ByVal strDB     As String, _
+                                Optional ByVal strID     As String, _
+                                Optional ByVal strPW     As String, _
+                                Optional ByVal blnParens As Boolean = False) As Variant
+
+    If prv_IsArrayEmpty(arrFields) Then Exit Function
+
+    Dim arrSchema As Variant
+    Dim dicFields As Object
+    Dim arrResult As Variant
+    Dim strKey    As String
+    Dim i         As Long
+    Dim idx       As Long
+
+    arrSchema = GetFieldInfo(strType, strTable, strFile, strServer, strPort, strDB, strID, strPW)
+
+    If prv_IsArrayEmpty(arrSchema) Then
+        MsgBox "필드 정보를 가져올 수 없습니다. DB 연결 및 테이블명을 확인하세요.", _
+               vbCritical, am_Core.AM_NAME
+        Exit Function
+    End If
+
+    Set dicFields = CreateObject("Scripting.Dictionary")
+    On Error Resume Next
+    For i = 0 To UBound(arrSchema)
+        dicFields.Add arrSchema(i, 1), arrSchema(i, 2)
+    Next i
+    On Error GoTo 0
+
+    idx = 0
+    ReDim arrResult(1, UBound(arrFields) - LBound(arrFields))
+
+    For i = LBound(arrFields) To UBound(arrFields)
+        strKey = CStr(arrFields(i))
+        arrResult(0, idx) = IIf(blnParens, "[" & strKey & "]", strKey)
+        arrResult(1, idx) = IIf(dicFields.Exists(strKey), dicFields(strKey), "")
+        idx = idx + 1
+    Next i
+
+    Set dicFields = Nothing
+    GetFieldAndType = arrResult
+
+End Function
+
+' 목적   : 테이블의 필드명·타입명·데이터수·순번을 묶어 반환
+'          반환 구조: (0,i)=필드명 / (1,i)=타입명 / (2,i)=데이터수 / (3,i)=순번
+' 인수   : strType   - DB 종류
+'          strTable  - 테이블명
+'          strFile   - 파일 경로
+'          strServer / strPort / strDB / strID / strPW - 서버 접속 정보
+' 반환   : Variant - 4행 × 필드수 배열
+' 예시   : GetFieldNameConnection("엑세스", "T1", "C:\DB\main.accdb")
+Public Function GetFieldNameConnection(ByVal strType   As String, _
+                                       ByVal strTable  As String, _
+                                       Optional ByVal strFile   As String, _
+                                       Optional ByVal strServer As String, _
+                                       Optional ByVal strPort   As String, _
+                                       Optional ByVal strDB     As String, _
+                                       Optional ByVal strID     As String, _
+                                       Optional ByVal strPW     As String) As Variant
+
+    If strTable = "" Then Exit Function
+
+    Dim arrSchema As Variant
+    Dim arrValues As Variant
+    Dim i         As Long
+
+    arrSchema = GetFieldInfo(strType, strTable, strFile, strServer, strPort, strDB, strID, strPW)
+    If prv_IsArrayEmpty(arrSchema) Then Exit Function
+
+    ReDim arrValues(3, UBound(arrSchema))
+
+    For i = 0 To UBound(arrSchema)
+        arrValues(0, i) = arrSchema(i, 1)  ' 필드명
+        arrValues(1, i) = arrSchema(i, 2)  ' 타입명
+        arrValues(2, i) = arrSchema(i, 5)  ' 데이터수
+        arrValues(3, i) = arrSchema(i, 0)  ' 순번
+    Next i
+
+    GetFieldNameConnection = arrValues
+
+End Function
+
+' ══════════════════════════════════════════════════════════
+'  Access DB 조작
+' ══════════════════════════════════════════════════════════
+
+' 목적   : Access DB 에 SQL 방식으로 테이블 생성 (기존 동명 테이블 삭제 후 재생성)
+' 인수   : strFile          - Access 파일 경로 (.accdb)
+'          strTable         - 테이블명
+'          arrFieldAndTypes - 필드 정의 배열 Array(Array(순번, 필드명, 타입코드), ...)
+'                             타입코드: 3=Long, 130/202/200=Text, 7=DateTime, 5=Double, 11=Boolean, 12=Memo
+' 반환   : Boolean - True: 성공
+' 예시   : CreateAccessTable("C:\DB\main.accdb", "T1", Array(Array(1,"ID",3), Array(2,"Name",130)))
+Public Function CreateAccessTable(ByVal strFile          As String, _
+                                  ByVal strTable         As String, _
+                                  ByVal arrFieldAndTypes As Variant) As Boolean
+
+    On Error GoTo ErrHandler
+
+    Dim objConn     As Object
+    Dim strSQL      As String
+    Dim strFieldDef As String
+    Dim strFldName  As String
+    Dim intFldType  As Integer
+    Dim arrFields() As String
+    Dim i           As Integer
+
+    Set objConn = CreateObject("ADODB.Connection")
+    objConn.Open "Provider=Microsoft.ACE.OLEDB." & DB_ACCESS_VER & ";Data Source=" & strFile
+
+    On Error Resume Next
+    objConn.Execute "DROP TABLE [" & strTable & "]"
+    On Error GoTo ErrHandler
+
+    ReDim arrFields(UBound(arrFieldAndTypes) - LBound(arrFieldAndTypes))
+
+    For i = LBound(arrFieldAndTypes) To UBound(arrFieldAndTypes)
+        strFldName = arrFieldAndTypes(i)(1)
+        intFldType = arrFieldAndTypes(i)(2)
+
+        Select Case intFldType
+            Case 3
+                If UCase(strFldName) = "ID" Then
+                    strFieldDef = "[" & strFldName & "] AUTOINCREMENT PRIMARY KEY"
+                Else
+                    strFieldDef = "[" & strFldName & "] LONG"
+                End If
+            Case 130, 202, 200: strFieldDef = "[" & strFldName & "] TEXT(255)"
+            Case 7:              strFieldDef = "[" & strFldName & "] DATETIME"
+            Case 5:              strFieldDef = "[" & strFldName & "] DOUBLE"
+            Case 11:             strFieldDef = "[" & strFldName & "] BIT"
+            Case 12:             strFieldDef = "[" & strFldName & "] MEMO"
+            Case Else:           strFieldDef = "[" & strFldName & "] TEXT(255)"
+        End Select
+
+        arrFields(i - LBound(arrFieldAndTypes)) = strFieldDef
+    Next i
+
+    strSQL = "CREATE TABLE [" & strTable & "] (" & Join(arrFields, ", ") & ")"
+    objConn.Execute strSQL
+
+    CreateAccessTable = True
+    GoTo CleanUp
+
+ErrHandler:
+    CreateAccessTable = False
+    MsgBox "테이블 생성 오류" & vbCrLf & _
+           "오류 " & Err.Number & ": " & Err.Description, _
+           vbCritical, am_Core.AM_NAME
+
+CleanUp:
+    On Error Resume Next
+    If Not objConn Is Nothing Then
+        If objConn.State = 1 Then objConn.Close
+    End If
+    Set objConn = Nothing
+
+End Function
+
+' 목적   : Access 테이블의 모든 데이터 삭제 (구조는 유지)
+' 인수   : strFile  - Access 파일 경로
+'          strTable - 대상 테이블명
+' 반환   : Boolean - True: 성공
+' 예시   : DeleteAccessTable("C:\DB\main.accdb", "T1")
+Public Function DeleteAccessTable(ByVal strFile  As String, _
+                                  ByVal strTable As String) As Boolean
+
+    On Error GoTo ErrHandler
+
+    Dim objConn As Object
+
+    Set objConn = CreateObject("ADODB.Connection")
+    objConn.Open "Provider=Microsoft.ACE.OLEDB." & DB_ACCESS_VER & ";Data Source=" & strFile & ";"
+    objConn.Execute "DELETE FROM " & strTable
+
+    DeleteAccessTable = True
+    GoTo CleanUp
+
+ErrHandler:
+    DeleteAccessTable = False
+    MsgBox "테이블 데이터 삭제 오류" & vbCrLf & _
+           "오류 " & Err.Number & ": " & Err.Description, _
+           vbCritical, am_Core.AM_NAME
+
+CleanUp:
+    On Error Resume Next
+    If Not objConn Is Nothing Then
+        If objConn.State = 1 Then objConn.Close
+    End If
+    Set objConn = Nothing
+
+End Function
+
+' 목적   : Access 테이블을 ADOX 방식으로 생성 또는 필드 추가/수정
+'          기존 테이블이 없으면 신규 생성, 있으면 필드 비교 후 추가/변경
+' 인수   : strFile          - Access 파일 경로
+'          strTable         - 테이블명
+'          arrFieldAndTypes - 필드 정의 배열 Array(Array(순번, 필드명, 타입코드), ...)
+' 반환   : Boolean - True: 성공
+' 예시   : CreateAccessTableADOX("C:\DB\main.accdb", "T1", Array(Array(1,"ID",3), Array(2,"Name",130)))
+Public Function CreateAccessTableADOX(ByVal strFile          As String, _
+                                      ByVal strTable         As String, _
+                                      ByVal arrFieldAndTypes As Variant) As Boolean
+
+    On Error GoTo ErrHandler
+
+    Dim objCat          As Object
+    Dim objTbl          As Object
+    Dim objCol          As Object
+    Dim objConn         As Object
+    Dim objRS           As Object
+    Dim objIdx          As Object
+    Dim dicExisting     As Object
+    Dim strConStr       As String
+    Dim strIDFieldName  As String
+    Dim blnTableExists  As Boolean
+    Dim blnPKExists     As Boolean
+    Dim i               As Integer
+    Dim intOrderNum     As Integer
+    Dim strFieldName    As String
+    Dim intFieldType    As Integer
+    Dim intExistingOrder As Integer
+    Dim strExistingName  As String
+    Dim intExistingType  As Integer
+
+    Set dicExisting = CreateObject("Scripting.Dictionary")
+    strConStr = "Provider=Microsoft.ACE.OLEDB." & DB_ACCESS_VER & ";Data Source=" & strFile
+
+    Set objCat = CreateObject("ADOX.Catalog")
+    objCat.ActiveConnection = strConStr
+
+    Set objConn = CreateObject("ADODB.Connection")
+    objConn.Open strConStr
+
+    ' ── 1. 테이블 존재 여부 확인 ─────────────────────────────
+    blnTableExists = False
+    For i = 0 To objCat.Tables.Count - 1
+        If objCat.Tables(i).Name = strTable Then
+            blnTableExists = True
+            Set objTbl = objCat.Tables(strTable)
+            Exit For
+        End If
+    Next i
+
+    If Not blnTableExists Then
+
+        ' ── 2a. 신규 테이블 생성 ─────────────────────────────
+        Set objTbl      = CreateObject("ADOX.Table")
+        objTbl.Name     = strTable
+
+        For i = LBound(arrFieldAndTypes) To UBound(arrFieldAndTypes)
+            intOrderNum  = arrFieldAndTypes(i)(0)
+            strFieldName = arrFieldAndTypes(i)(1)
+            intFieldType = arrFieldAndTypes(i)(2)
+
+            Set objCol      = CreateObject("ADOX.Column")
+            objCol.Name     = strFieldName
+            objCol.Type     = intFieldType
+
+            If UCase(strFieldName) = "ID" Then
+                strIDFieldName = strFieldName
+                On Error Resume Next
+                objCol.Properties("AutoIncrement") = True
+                If Err.Number <> 0 Then
+                    Err.Clear
+                    objCol.Properties("Jet OLEDB:AutoIncrement") = True
+                    If Err.Number <> 0 Then Err.Clear
+                End If
+                On Error GoTo ErrHandler
+                objCol.Attributes = 2
+            End If
+
+            If intFieldType = 202 Or intFieldType = 200 Or intFieldType = 130 Then
+                objCol.DefinedSize = 255
+            End If
+
+            objTbl.Columns.Append objCol
+            Set objCol = Nothing
+        Next i
+
+        If strIDFieldName <> "" Then
+            Set objIdx        = CreateObject("ADOX.Index")
+            objIdx.Name       = "PrimaryKey"
+            objIdx.PrimaryKey = True
+            objIdx.Unique     = True
+            Set objCol        = CreateObject("ADOX.Column")
+            objCol.Name       = strIDFieldName
+            objIdx.Columns.Append objCol
+            objTbl.Indexes.Append objIdx
+            Set objCol = Nothing
+            Set objIdx = Nothing
+        End If
+
+        objCat.Tables.Append objTbl
+
+    Else
+
+        ' ── 2b. 기존 테이블 필드 추가/수정 ──────────────────
+        Set objRS = objConn.OpenSchema(4, Array(Empty, Empty, strTable))
+        Do While Not objRS.EOF
+            intExistingOrder = objRS.Fields("ORDINAL_POSITION").Value
+            strExistingName  = objRS.Fields("COLUMN_NAME").Value
+            intExistingType  = objRS.Fields("DATA_TYPE").Value
+            dicExisting.Add intExistingOrder, Array(strExistingName, intExistingType)
+            objRS.MoveNext
+        Loop
+        objRS.Close
+
+        For i = LBound(arrFieldAndTypes) To UBound(arrFieldAndTypes)
+            intOrderNum  = arrFieldAndTypes(i)(0)
+            strFieldName = arrFieldAndTypes(i)(1)
+            intFieldType = arrFieldAndTypes(i)(2)
+
+            If UCase(strFieldName) = "ID" Then strIDFieldName = strFieldName
+
+            If dicExisting.Exists(intOrderNum) Then
+                strExistingName = dicExisting(intOrderNum)(0)
+                intExistingType = dicExisting(intOrderNum)(1)
+
+                If strExistingName <> strFieldName Or intExistingType <> intFieldType Then
+                    On Error Resume Next
+                    Set objCol = objTbl.Columns(strExistingName)
+                    If Err.Number = 0 Then
+                        If strExistingName <> strFieldName Then objCol.Name = strFieldName
+                        If intExistingType <> intFieldType Then
+                            objCol.Type = intFieldType
+                            If intFieldType = 202 Or intFieldType = 200 Or intFieldType = 130 Then
+                                objCol.DefinedSize = 255
+                            End If
+                        End If
+                    End If
+                    Err.Clear
+                    On Error GoTo ErrHandler
+                    Set objCol = Nothing
+                End If
+
+            Else
+                Set objCol      = CreateObject("ADOX.Column")
+                objCol.Name     = strFieldName
+                objCol.Type     = intFieldType
+
+                If UCase(strFieldName) = "ID" Then
+                    On Error Resume Next
+                    objCol.Properties("AutoIncrement") = True
+                    If Err.Number <> 0 Then
+                        Err.Clear
+                        objCol.Properties("Jet OLEDB:AutoIncrement") = True
+                        If Err.Number <> 0 Then Err.Clear
+                    End If
+                    On Error GoTo ErrHandler
+                    objCol.Attributes = 2
+                End If
+
+                If intFieldType = 202 Or intFieldType = 200 Or intFieldType = 130 Then
+                    objCol.DefinedSize = 255
+                End If
+
+                objTbl.Columns.Append objCol
+                Set objCol = Nothing
+            End If
+        Next i
+
+        If strIDFieldName <> "" Then
+            blnPKExists = False
+            On Error Resume Next
+            For i = 0 To objTbl.Indexes.Count - 1
+                If objTbl.Indexes(i).PrimaryKey = True Then
+                    blnPKExists = True
+                    Exit For
+                End If
+            Next i
+            On Error GoTo ErrHandler
+
+            If Not blnPKExists Then
+                On Error Resume Next
+                Set objIdx        = CreateObject("ADOX.Index")
+                objIdx.Name       = "PrimaryKey"
+                objIdx.PrimaryKey = True
+                objIdx.Unique     = True
+                Set objCol        = CreateObject("ADOX.Column")
+                objCol.Name       = strIDFieldName
+                objIdx.Columns.Append objCol
+                objTbl.Indexes.Append objIdx
+                Err.Clear
+                Set objCol = Nothing
+                Set objIdx = Nothing
+                On Error GoTo ErrHandler
+            End If
+        End If
+
+    End If
+
+    CreateAccessTableADOX = True
+    GoTo CleanUp
+
+ErrHandler:
+    CreateAccessTableADOX = False
+    MsgBox "Access 테이블 생성/수정 오류" & vbCrLf & _
+           "오류 " & Err.Number & ": " & Err.Description, _
+           vbCritical, am_Core.AM_NAME
+
+CleanUp:
+    On Error Resume Next
+    If Not objRS    Is Nothing Then Set objRS = Nothing
+    If Not objConn  Is Nothing Then
+        If objConn.State = 1 Then objConn.Close
+    End If
+    Set objConn     = Nothing
+    Set objCol      = Nothing
+    Set objIdx      = Nothing
+    Set objTbl      = Nothing
+    Set objCat      = Nothing
+    Set dicExisting = Nothing
+
+End Function
+
+' 목적   : Access 테이블에서 지정 순번의 필드 삭제
+' 인수   : strFile      - Access 파일 경로
+'          strTable     - 테이블명
+'          arrPosition  - 삭제할 필드 순번 배열 (예: Array(2, 5))
+' 반환   : Boolean - True: 성공
+' 예시   : DeleteAccessFields("C:\DB\main.accdb", "T1", Array(2, 5))
+Public Function DeleteAccessFields(ByVal strFile     As String, _
+                                   ByVal strTable    As String, _
+                                   ByVal arrPosition As Variant) As Boolean
+
+    On Error GoTo ErrHandler
+
+    Dim objCat          As Object
+    Dim objTbl          As Object
+    Dim objConn         As Object
+    Dim objRS           As Object
+    Dim dicExisting     As Object
+    Dim blnTableExists  As Boolean
+    Dim strConStr       As String
+    Dim i               As Integer
+    Dim intDelPosition  As Integer
+    Dim intExistingOrder As Integer
+    Dim strExistingName  As String
+    Dim strFieldToDelete As String
+
+    Set dicExisting = CreateObject("Scripting.Dictionary")
+    strConStr = "Provider=Microsoft.ACE.OLEDB." & DB_ACCESS_VER & ";Data Source=" & strFile
+
+    Set objCat = CreateObject("ADOX.Catalog")
+    objCat.ActiveConnection = strConStr
+
+    Set objConn = CreateObject("ADODB.Connection")
+    objConn.Open strConStr
+
+    ' ── 1. 테이블 존재 확인 ──────────────────────────────────
+    blnTableExists = False
+    For i = 0 To objCat.Tables.Count - 1
+        If objCat.Tables(i).Name = strTable Then
+            blnTableExists = True
+            Set objTbl = objCat.Tables(strTable)
+            Exit For
+        End If
+    Next i
+
+    If Not blnTableExists Then
+        MsgBox "테이블 '" & strTable & "'이(가) 존재하지 않습니다.", _
+               vbCritical, am_Core.AM_NAME
+        DeleteAccessFields = False
+        GoTo CleanUp
+    End If
+
+    ' ── 2. 기존 필드 목록 수집 ───────────────────────────────
+    Set objRS = objConn.OpenSchema(4, Array(Empty, Empty, strTable))
+    Do While Not objRS.EOF
+        intExistingOrder = objRS.Fields("ORDINAL_POSITION").Value
+        strExistingName  = objRS.Fields("COLUMN_NAME").Value
+        dicExisting.Add intExistingOrder, strExistingName
+        objRS.MoveNext
+    Loop
+    objRS.Close
+
+    ' ── 3. 필드 삭제 ─────────────────────────────────────────
+    For i = LBound(arrPosition) To UBound(arrPosition)
+        intDelPosition = arrPosition(i)
+        If dicExisting.Exists(intDelPosition) Then
+            strFieldToDelete = dicExisting(intDelPosition)
+            On Error Resume Next
+            objTbl.Columns.Delete strFieldToDelete
+            Err.Clear
+            On Error GoTo ErrHandler
+        End If
+    Next i
+
+    DeleteAccessFields = True
+    GoTo CleanUp
+
+ErrHandler:
+    DeleteAccessFields = False
+    MsgBox "필드 삭제 오류" & vbCrLf & _
+           "오류 " & Err.Number & ": " & Err.Description, _
+           vbCritical, am_Core.AM_NAME
+
+CleanUp:
+    On Error Resume Next
+    If Not objRS    Is Nothing Then Set objRS = Nothing
+    If Not objConn  Is Nothing Then
+        If objConn.State = 1 Then objConn.Close
+    End If
+    Set objConn     = Nothing
+    Set objTbl      = Nothing
+    Set objCat      = Nothing
+    Set dicExisting = Nothing
+
+End Function
