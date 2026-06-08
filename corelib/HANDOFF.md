@@ -26,7 +26,7 @@ CWB(Client WorkBook)에서 `Workbooks.Open` 방식으로 xlam을 로드하고
 
 ---
 
-## 현재 완성 상태 (2026-06-05 기준)
+## 현재 완성 상태 (2026-06-08 기준)
 
 ### 완성된 am_ 모듈
 
@@ -44,27 +44,90 @@ CWB(Client WorkBook)에서 `Workbooks.Open` 방식으로 xlam을 로드하고
 | `am_Utils` | 배열·검사·코드생성·날짜·외부앱·도구·수식 유틸리티 |
 | `am_Excel` | 인쇄/내보내기, 차트, 도형, 키보드/마우스 자동화 |
 
+### 완성된 cwb_ 모듈
+
+| 모듈 | 주요 기능 |
+|---|---|
+| `tpl_Test` | 전 모듈 자동화 테스트 (31개 프로시저) |
+
 ### 미완성
 
-없음 — 전체 Phase 완료
+없음 — 전체 Phase 완료, 테스트 코드 작성 완료
 
 ---
 
 ## 다음 작업
 
-**전체 이식 완료. 새 작업 발생 시 아래 우선순위로 진행:**
+**바로 다음 작업: tpl_Test.RunAllTests() 실행 및 결과 검증**
 
-1. **xlam 실제 적용 테스트** — cwb_01.xlsm 에서 각 모듈 함수 호출 검증
+### 테스트 실행 절차
+
+1. cwb_01.xlsm 에 `cwb/tpl_Test.bas` 임포트
+2. `corelib.xlam` 을 같은 폴더에 배치하고 cwb_01.xlsm 열기 (자동 로드)
+3. VBE Immediate 창에서 `tpl_Test.RunAllTests` 실행
+4. 출력에서 `FAIL` 항목 확인 → 버그 수정
+
+### 예상 이슈 체크리스트
+
+| 항목 | 확인 포인트 |
+|---|---|
+| Property Get via Application.Run | `am_Core.XlamPath` 등 Property Get 호출 가능 여부 (불가 시 래퍼 함수 추가 필요) |
+| Range 반환 Nothing 처리 | `RunGetRng` 헬퍼가 모든 케이스를 커버하는지 확인 |
+| `SortTable` / `SortTableCustomList` | 내부 `Range("T_TestData")` 가 cwb_01.xlsm 의 테이블을 참조하는지 확인 |
+| `BackupSheet` 활성 워크북 변경 | ws.Copy 후 ActiveWorkbook 이 바뀌는 타이밍 문제 |
+| `am_Error` 테스트 없음 | `ENABLE_ERROR_LOG=False` 기본값으로 WriteLog 무동작 — 테스트 생략 상태 |
+
+### 이후 우선순위
+
+1. **버그 수정** — RunAllTests 실행 중 발견된 FAIL 항목 처리
 2. **신규 기능 추가** — 필요 시 SOURCES.md 미이식 항목 재검토
-3. **버그 수정** — 사용 중 발견된 이슈 처리
+3. **실 CWB 적용** — cwb_01.xlsm 에서 실제 업무 함수 호출 검증
 
 ### 완료된 Phase 이력
+
 | Phase | 내용 | 완료일 |
 |---|---|---|
 | Phase 1 | 기본 구조 (am_Core/Path/File/DB/Sheet/Table/Range/Format) | 2026-05-21 ~ 06-02 |
 | Phase 2 | 신규 모듈 (am_Error, am_DB 확장) | 2026-06-04 |
 | Phase 3 | am_Utils 신규 | 2026-06-05 |
 | Phase 4 | am_Excel 완성 | 2026-06-05 |
+| Phase 5 | tpl_Test 전 모듈 테스트 작성 | 2026-06-08 |
+
+---
+
+## tpl_Test 구조 요약 (2026-06-08 기준)
+
+### 진입점
+
+| 프로시저 | 설명 |
+|---|---|
+| `RunAllTests` | 전체 순차 실행 |
+| `Setup_TestSheet` | `__TEST__` 시트 + `T_TestData` 테이블 자동 생성 |
+| `Teardown_TestSheet` | `__TEST__` 삭제 + `_test_tmp` 폴더 정리 |
+
+### 테스트 실행 순서
+
+```
+Test_Core → Test_Path → Test_File → Test_Utils
+→ Setup_TestSheet
+→ Test_Range → Test_Format → Test_Table → Test_Sheet → Test_Excel
+→ Teardown_TestSheet
+```
+
+### 모듈별 테스트 커버리지
+
+| 모듈 | 테스트 프로시저 | 주요 검증 항목 |
+|---|---|---|
+| am_Core | `Test_Core` | XlamPath/Version/IsReady/IsXlamLoaded, DPUpdate/Event/Calculate Off-On |
+| am_Path | `Test_Path` (×6) | 고정토큰, 커스텀토큰, 절대경로, UNC, 드라이브매핑, 엣지케이스 |
+| am_File | `Test_File` | GetExt, CheckFolderExistence, MkFolder 중첩, CheckFileExistence, DelFolder |
+| am_Utils | `Test_Utils` (×5) | ConvertToArrData, IsArrayEmpty, IsValidFileName, CreateUniqueID, GenerateRandomCode, ConvertToExcelSerialDate, ExtractValues, EvaluateFormula |
+| am_Range | `Test_Range` | GetUsedRange, FindRange(있음/없음), FindCellsByColor(있음/없음) |
+| am_Format | `Test_Format` | CF 추가/삭제(Formula/ColorScale/DataBar), ValidationList, SetValidation, ClearValidation ※am_Utils.GetValidationType 교차검증 |
+| am_Table | `Test_Table` | GetTableNames, IsTable, TblFindVals_MC/One/Rng, intOffset, AutoTableFilter, SortTable, SortTableCustomList, ChangeTableValue, AddTableRows, DelTableFilteredRows, AddArrayColumns, DelTableColumns |
+| am_Sheet | `Test_Sheet` | GetSheetNames, VisibleAllSheets, HideAllSheetsExceptOne, SortSheets(역순→복원), BackupSheet, BackupWorkbook, SheetLock/SheetUnLock |
+| am_Excel | `Test_Excel` | SetPrintPage, ExportSheetToCSV, ExportPDF |
+| am_Error | — | ENABLE_ERROR_LOG=False 기본값으로 자동 테스트 불가 (수동 확인 필요) |
 
 ---
 

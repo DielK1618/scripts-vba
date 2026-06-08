@@ -29,7 +29,7 @@
 |---|---|---|---|
 | `현재_통합_문서.cls` | `ThisWorkbook` | ✅ 완성 | |
 | `tpl_Path.bas` | `tpl_Path` | ✅ 완성 | |
-| `tpl_Test.bas` | `tpl_Test` | ✅ 완성 | am_Path 테스트 포함 |
+| `tpl_Test.bas` | `tpl_Test` | ✅ 완성 | am_Core/Path/File/Utils 전 모듈 테스트 포함 |
 
 ---
 
@@ -53,19 +53,19 @@
 | `tpl_MsSQL` | `am_DB` | ✅ 완료 |
 | `tpl_MySQL_Sub` (일부) | `am_DB` | ✅ 완료 |
 | `tpl_Access` | `am_DB` | ✅ 완료 |
-| `tpl_Array` | `am_Utils` | ⬜ 미이식 |
-| `tpl_Check` (일부) | `am_Utils` | ⬜ 미이식 |
-| `tpl_Code` (일부) | `am_Utils` | ⬜ 미이식 |
-| `tpl_ExtApp` | `am_Utils` | ⬜ 미이식 |
-| `tpl_Media` (일부) | `am_Utils` | ⬜ 미이식 |
-| `tpl_ReplaceText` (일부) | `am_Utils` | ⬜ 미이식 |
-| `tpl_Tools` (일부) | `am_Utils` | ⬜ 미이식 |
-| `tpl_Validation` | `am_Utils` | ⬜ 미이식 |
-| `tpl_Chart` | `am_Excel` | ⬜ 미이식 |
-| `tpl_ExportFile` | `am_Excel` | ⬜ 미이식 |
-| `tpl_KeyBoard` | `am_Excel` | ⬜ 미이식 |
-| `tpl_Mouse` | `am_Excel` | ⬜ 미이식 |
-| `tpl_Shapes` | `am_Excel` | ⬜ 미이식 |
+| `tpl_Array` | `am_Utils` | ✅ 완료 |
+| `tpl_Check` (일부) | `am_Utils` | ✅ 완료 |
+| `tpl_Code` (일부) | `am_Utils` | ✅ 완료 |
+| `tpl_ExtApp` | `am_Utils` | ✅ 완료 |
+| `tpl_Media` (일부) | `am_Utils` | ✅ 완료 |
+| `tpl_ReplaceText` (일부) | `am_Utils` | ✅ 완료 |
+| `tpl_Tools` (일부) | `am_Utils` | ✅ 완료 |
+| `tpl_Validation` | `am_Utils` | ✅ 완료 |
+| `tpl_Chart` | `am_Excel` | ✅ 완료 |
+| `tpl_ExportFile` | `am_Excel` | ✅ 완료 |
+| `tpl_KeyBoard` | `am_Excel` | ✅ 완료 |
+| `tpl_Mouse` | `am_Excel` | ✅ 완료 |
+| `tpl_Shapes` | `am_Excel` | ✅ 완료 |
 | `tpl_Buttons`, `tpl_Buttons_other`, `tpl_Buttons_Top` | — | ❌ CWB 전용 |
 | `tpl_Form`, `tpl_TestBed`, `tpl_Procedure` | — | ❌ CWB 전용 |
 | `frm_*` (전체) | — | ❌ CWB 전용 (사용자 직접 제작) |
@@ -123,6 +123,7 @@
 
 | 날짜 | 내용 |
 |---|---|
+| 2026-06-08 | tpl_Test 전 모듈 테스트 전면 재작성: Setup/Teardown_TestSheet(자동 시트·테이블 생성·정리), am_Core/Path/File/Utils/Range/Format/Table/Sheet/Excel 전 모듈 커버, RunGetRng 헬퍼(Range 반환 안전처리), prv_CountHiddenSheets/CountVisibleSheets 추가 |
 | 2026-05-21 | 프로젝트 시작, 기본 구조 설계 |
 | 2026-05-21 | am_Core, am_Path, am_File, am_DB, am_Excel 완성 |
 | 2026-05-21 | tpl_Path, tpl_Test, ThisWorkbook (xlam/cwb) 완성 |
