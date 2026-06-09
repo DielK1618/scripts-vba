@@ -116,7 +116,7 @@ End Sub
 
 ' 목적   : 워크북 내 시트명 배열 반환
 ' 인수   : wb - 대상 워크북
-' 반환   : Variant - 시트명 배열 (세로 방향)
+' 반환   : Variant - 시트명 1차원 배열 (0-based)
 ' 예시   : arr = GetSheetNames(ThisWorkbook)
 Public Function GetSheetNames(ByVal wb As Workbook) As Variant
 
@@ -130,7 +130,7 @@ Public Function GetSheetNames(ByVal wb As Workbook) As Variant
         i = i + 1
     Next objSht
 
-    GetSheetNames = Application.WorksheetFunction.Transpose(arrResult)
+    GetSheetNames = arrResult
 
 End Function
 

@@ -123,6 +123,7 @@
 
 | 날짜 | 내용 |
 |---|---|
+| 2026-06-09 | am_Sheet.GetSheetNames 버그 수정: `Application.WorksheetFunction.Transpose` 제거 → 1차원 배열 직접 반환. tpl_Test.Test_Sheet에서 arrNames(i) 단일 인덱스 접근 시 2D 배열 오류 방지 |
 | 2026-06-08 | tpl_Test 전 모듈 테스트 전면 재작성: Setup/Teardown_TestSheet(자동 시트·테이블 생성·정리), am_Core/Path/File/Utils/Range/Format/Table/Sheet/Excel 전 모듈 커버, RunGetRng 헬퍼(Range 반환 안전처리), prv_CountHiddenSheets/CountVisibleSheets 추가 |
 | 2026-05-21 | 프로젝트 시작, 기본 구조 설계 |
 | 2026-05-21 | am_Core, am_Path, am_File, am_DB, am_Excel 완성 |

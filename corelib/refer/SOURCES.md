@@ -27,7 +27,7 @@
 | 함수/선언 | 이식 여부 | 비고 |
 |---|---|---|
 | `DBvar` (Type) | ✅ → am_DB | DB 작업 구조체 |
-| `uiColor` (Enum) | ⬜ 검토 | 테마컬러 Enum, xlam 필요 여부 확인 |
+| `uiColor` (Enum) | ❌ 제외 | 특정 CWB 전용 테마컬러, xlam 범용 상수로 부적합 |
 | `Public cl As New Common` | ❌ 제외 | vba.xlsm 전용 클래스 |
 | `Public Const PW` | ❌ 제외 | 특정 워크북 비밀번호 |
 | `dicPub / dicPubRev` | ❌ 제외 | am_DB 내부로 이동 |
@@ -204,12 +204,12 @@
 | 함수 | 이식 여부 | 비고 |
 |---|---|---|
 | `BtCreateColorProcedure` | ❌ 제외 | GetTwbRange 시트 종속 |
-| `CheckProc` | ✅ | VBA 모듈/프로시저 존재 확인 |
-| `AddProcedure` | ✅ | VBA 모듈에 코드 추가 |
-| `DelProcedure` | ✅ | VBA 모듈에서 코드 삭제 |
-| `ReplaceModuleLine` | ✅ | 모듈 특정 줄 교체 |
-| `ReplaceAllLinesInModule` | ✅ | 모듈 전체 줄 교체 |
-| `ReplaceTextInModule` | ✅ | 모듈 내 텍스트 교체 |
+| `CheckProc` | ❌ 제외 | ThisWorkbook.VBProject 의존, Trust Center 설정 필요 |
+| `AddProcedure` | ❌ 제외 | ThisWorkbook.VBProject 의존 |
+| `DelProcedure` | ❌ 제외 | ThisWorkbook.VBProject 의존 |
+| `ReplaceModuleLine` | ❌ 제외 | ThisWorkbook.VBProject 의존 |
+| `ReplaceAllLinesInModule` | ❌ 제외 | ThisWorkbook.VBProject 의존 |
+| `ReplaceTextInModule` | ❌ 제외 | ThisWorkbook.VBProject 의존 |
 
 ### tpl_ReplaceText
 | 함수 | 이식 여부 | 비고 |
@@ -230,10 +230,10 @@
 | `ResetDB` | ❌ 제외 | 특정 DB 변수 종속 |
 | `ResetAutoNumber` | ❌ 제외 | DAO, 특정 테이블 하드코딩 |
 | `ChangeAllShapesFont` | ❌ 제외 | 폰트명 하드코딩 |
-| `SetAllUserFormFontsToPretendard` | ❌ 제외 | 폰트명 하드코딩 |
+| `SetAllUserFormFontsToPretendard` | ❌ 제외 | 폰트명 하드코딩, VBProject 의존 |
 | `WaitMs` | ✅ | ms 단위 대기 |
-| `SyncCodeNamesToSheetNames` | ✅ | 시트명→CodeName 동기화 |
-| `CleanCodeName` | ✅ → prv_ | 내부 전용 |
+| `SyncCodeNamesToSheetNames` | ❌ 제외 | VBProject/VBIDE 의존, Trust Center 설정 필요 |
+| `CleanCodeName` | ❌ 제외 | SyncCodeNamesToSheetNames 전용 내부 함수, 함께 제외 |
 
 ### tpl_Validation
 | 함수 | 이식 여부 | 비고 |
