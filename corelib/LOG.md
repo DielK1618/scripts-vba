@@ -123,6 +123,8 @@
 
 | 날짜 | 내용 |
 |---|---|
+| 2026-06-11 | corelib_manual_cd.html 신규 — corelib_manual.html 을 Claude Design 기반으로 리뉴얼한 사용자 매뉴얼 완성 |
+| 2026-06-11 | corelib_manual.html 신규 — 11개 모듈 전체 프로시저 설명·코드예시·사이드바·전체 개요 섹션(이름+한 줄 설명) 포함 HTML 매뉴얼 제작 |
 | 2026-06-11 | 전 모듈 테스트 완료 — am_Core/Path/File/Utils/Error/Range/Format/Table/Sheet/Excel 전체 OK |
 | 2026-06-11 | am_Core.IsReady 버그 수정: VBE 리셋 후 m_blnReady=False 유지 → lazy-init(미초기화 시 Initialize() 자동 호출)으로 해결 |
 | 2026-06-11 | am_Table.AutoTableFilter_Arr 버그 수정: arrWildCards() As String → As Variant (Application.Run Variant 배열 수신 오류 방지) |
