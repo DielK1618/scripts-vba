@@ -101,14 +101,16 @@ Public Sub ExportPDF(ByVal strFilePath As String, _
 End Sub
 
 ' 목적   : 시트를 CSV 파일로 내보내기 (쉼표 구분, UTF-8)
-' 인수   : sht         - 내보낼 시트
-'          strPath     - 저장 폴더 경로
+' 인수   : strPath     - 저장 폴더 경로
 '          strFileName - 저장 파일명 (확장자 포함)
-' 예시   : ExportSheetToCSV(Sheet1, "C:\출력", "data.csv")
-Public Sub ExportSheetToCSV(ByVal sht As Worksheet, _
-                            ByVal strPath As String, _
-                            ByVal strFileName As String)
-    Application.Run REF & "ExportSheetToCSV", sht, strPath, strFileName
+'          sht         - 내보낼 시트 (기본: ActiveSheet)
+' 예시   : ExportSheetToCSV "C:\출력", "data.csv"
+'          ExportSheetToCSV "C:\출력", "data.csv", Sheet2
+Public Sub ExportSheetToCSV(ByVal strPath As String, _
+                            ByVal strFileName As String, _
+                            Optional ByVal sht As Worksheet = Nothing)
+    If sht Is Nothing Then Set sht = ActiveSheet
+    Application.Run REF & "ExportSheetToCSV", strPath, strFileName, sht
 End Sub
 
 ' ── 차트 ─────────────────────────────────────────────────────

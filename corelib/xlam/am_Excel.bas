@@ -182,12 +182,16 @@ ErrHandler:
 End Sub
 
 ' 목적   : 워크시트를 CSV 파일로 내보내기 (xlCSV, 시스템 로케일 인코딩)
-' 인수   : sht         - CSV로 저장할 워크시트
-'          strPath     - 저장 폴더 경로 (없으면 자동 생성)
+' 인수   : strPath     - 저장 폴더 경로 (없으면 자동 생성)
 '          strFileName - 파일명 (.csv 확장자 있어도 자동 처리)
-Public Sub ExportSheetToCSV(ByVal sht As Worksheet, _
-                            ByVal strPath As String, _
-                            ByVal strFileName As String)
+'          sht         - CSV로 저장할 워크시트 (기본: ActiveSheet)
+' 예시   : ExportSheetToCSV "C:\Data", "output"
+'          ExportSheetToCSV "C:\Data", "output", Sheet2
+Public Sub ExportSheetToCSV(ByVal strPath As String, _
+                            ByVal strFileName As String, _
+                            Optional ByVal sht As Worksheet = Nothing)
+
+    If sht Is Nothing Then Set sht = ActiveSheet
 
     On Error GoTo ErrHandler
 

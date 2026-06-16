@@ -223,14 +223,16 @@ Public Sub AutoIDs(ByVal rng As Range)
 End Sub
 
 ' 목적   : 엑셀 DB 시트에서 특정 ID 레코드 삭제
-' 인수   : wb           - 엑셀 DB 워크북
-'          strSheetName - 대상 시트명
+' 인수   : strSheetName - 대상 시트명
 '          strID        - 삭제할 레코드 ID
-' 예시   : DelExcelRecQuery(wbDB, "tbl_User", "U001")
-Public Sub DelExcelRecQuery(ByVal wb As Workbook, _
-                            ByVal strSheetName As String, _
-                            ByVal strID As String)
-    Application.Run REF & "DelExcelRecQuery", wb, strSheetName, strID
+'          wb           - 엑셀 DB 워크북 (기본: ActiveWorkbook)
+' 예시   : DelExcelRecQuery "tbl_User", "U001"
+'          DelExcelRecQuery "tbl_User", "U001", wbDB
+Public Sub DelExcelRecQuery(ByVal strSheetName As String, _
+                            ByVal strID As String, _
+                            Optional ByVal wb As Workbook = Nothing)
+    If wb Is Nothing Then Set wb = ActiveWorkbook
+    Application.Run REF & "DelExcelRecQuery", strSheetName, strID, wb
 End Sub
 
 ' ── 테이블 분석 ───────────────────────────────────────────────

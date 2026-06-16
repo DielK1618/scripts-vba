@@ -1168,14 +1168,16 @@ End Sub
 ' ══════════════════════════════════════════════════════════
 
 ' 목적   : 엑셀 시트에서 A열 값이 strID 와 일치하는 행 삭제
-' 인수   : wb           - 대상 워크북
-'          strSheetName - 시트 이름
+' 인수   : strSheetName - 시트 이름
 '          strID        - 삭제 기준 A열 값
-' 예시   : DelExcelRecQuery(ThisWorkbook, "Sheet1", "001")
-Public Sub DelExcelRecQuery(ByVal wb           As Workbook, _
-                            ByVal strSheetName As String, _
-                            ByVal strID        As String)
+'          wb           - 대상 워크북 (기본: ActiveWorkbook)
+' 예시   : DelExcelRecQuery "Sheet1", "001"
+'          DelExcelRecQuery "Sheet1", "001", wbOther
+Public Sub DelExcelRecQuery(ByVal strSheetName As String, _
+                            ByVal strID        As String, _
+                            Optional ByVal wb  As Workbook = Nothing)
 
+    If wb Is Nothing Then Set wb = ActiveWorkbook
     Dim ws  As Worksheet
     Dim rng As Range
     Dim f   As Range

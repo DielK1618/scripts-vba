@@ -11,11 +11,13 @@ Option Explicit
 ' ══════════════════════════════════════════════════════════
 
 ' 목적   : 워크북 내 모든 시트의 테이블명 조회
-' 인수   : wb - 대상 워크북
+' 인수   : wb - 대상 워크북 (기본: ActiveWorkbook)
 ' 반환   : Variant - (시트명, 테이블명) 2열 배열
-' 예시   : arr = GetAllSheetTableNames(ThisWorkbook)
-Public Function GetAllSheetTableNames(ByVal wb As Workbook) As Variant
+' 예시   : arr = GetAllSheetTableNames()
+'          arr = GetAllSheetTableNames(wbOther)
+Public Function GetAllSheetTableNames(Optional ByVal wb As Workbook = Nothing) As Variant
 
+    If wb Is Nothing Then Set wb = ActiveWorkbook
     Dim ws          As Worksheet
     Dim tbl         As ListObject
     Dim arrResult() As Variant
@@ -37,13 +39,15 @@ Public Function GetAllSheetTableNames(ByVal wb As Workbook) As Variant
 End Function
 
 ' 목적   : 시트 내 테이블명 목록 조회
-' 인수   : ws          - 대상 시트
+' 인수   : ws          - 대상 시트 (기본: ActiveSheet)
 '          strPassName - 제외할 테이블명 패턴 (Like 패턴 사용)
 ' 반환   : Variant - 테이블명 배열
-' 예시   : arr = GetTableNames(Sheet1, "TS_*")
-Public Function GetTableNames(ByVal ws As Worksheet, _
+' 예시   : arr = GetTableNames()
+'          arr = GetTableNames(Sheet1, "TS_*")
+Public Function GetTableNames(Optional ByVal ws As Worksheet = Nothing, _
                               Optional ByVal strPassName As String = "") As Variant
 
+    If ws Is Nothing Then Set ws = ActiveSheet
     Dim tbl         As ListObject
     Dim arrResult() As Variant
     Dim i           As Long
@@ -339,14 +343,16 @@ End Function
 ' ══════════════════════════════════════════════════════════
 
 ' 목적   : 테이블 단일 필드 필터 적용
-' 인수   : tbl       - 대상 테이블
-'          fieldName - 필터 적용 필드명
+' 인수   : fieldName - 필터 적용 필드명
 '          strValue  - 필터 값 ("": 필터 해제)
-' 예시   : AutoTableFilter(tbl, "직급", "대리")
-Public Sub AutoTableFilter(ByVal tbl As ListObject, _
-                           ByVal fieldName As Variant, _
-                           ByVal strValue As String)
+'          tbl       - 대상 테이블 (기본: ActiveSheet 첫번째 테이블)
+' 예시   : AutoTableFilter "직급", "대리"
+'          AutoTableFilter "직급", "대리", tbl
+Public Sub AutoTableFilter(ByVal fieldName As Variant, _
+                           ByVal strValue As String, _
+                           Optional ByVal tbl As ListObject = Nothing)
 
+    If tbl Is Nothing Then Set tbl = ActiveSheet.ListObjects(1)
     Dim intField As Integer
     intField = tbl.ListColumns(fieldName).Index
 
@@ -359,16 +365,18 @@ Public Sub AutoTableFilter(ByVal tbl As ListObject, _
 End Sub
 
 ' 목적   : 테이블 필터 다중 값 적용
-' 인수   : tbl       - 대상 테이블
-'          fieldName - 필터 적용 필드명
+' 인수   : fieldName - 필터 적용 필드명
 '          arrValues - 필터 값 배열
 '          blnPart   - True: 부분 일치 (와일드카드 사용)
-' 예시   : AutoTableFilter_Arr(tbl, "직급", Array("대리", "과장"))
-Public Sub AutoTableFilter_Arr(ByVal tbl As ListObject, _
-                               ByVal fieldName As String, _
+'          tbl       - 대상 테이블 (기본: ActiveSheet 첫번째 테이블)
+' 예시   : AutoTableFilter_Arr "직급", Array("대리", "과장")
+'          AutoTableFilter_Arr "직급", Array("대리", "과장"), , tbl
+Public Sub AutoTableFilter_Arr(ByVal fieldName As String, _
                                ByVal arrValues As Variant, _
-                               Optional ByVal blnPart As Boolean = False)
+                               Optional ByVal blnPart As Boolean = False, _
+                               Optional ByVal tbl As ListObject = Nothing)
 
+    If tbl Is Nothing Then Set tbl = ActiveSheet.ListObjects(1)
     On Error Resume Next
 
     Dim intField    As Integer

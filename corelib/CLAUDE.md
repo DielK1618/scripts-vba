@@ -41,8 +41,19 @@ corelib/
 │
 └── cwb/                       ← cwb_01.xlsm 모듈 소스
     ├── 현재_통합_문서.cls     ← ThisWorkbook (cwb_01.xlsm)
-    ├── tpl_Path.bas
-    └── tpl_Test.bas
+    ├── ref_Core.bas           ← am_Core 래퍼 (기본 포함)
+    ├── ref_Path.bas           ← am_Path 래퍼 (기본 포함)
+    ├── ref_File.bas           ← am_File 래퍼 (기본 포함)
+    ├── ref_DB.bas             ← am_DB 래퍼 (기본 포함)
+    ├── ref_Excel.bas          ← am_Excel 래퍼 (기본 포함)
+    ├── ref_Range.bas          ← am_Range 래퍼 (기본 포함)
+    ├── ref_Sheet.bas          ← am_Sheet 래퍼 (기본 포함)
+    ├── ref_Table.bas          ← am_Table 래퍼 (기본 포함)
+    ├── ref_Format.bas         ← am_Format 래퍼 (기본 포함)
+    ├── ref_Utils.bas          ← am_Utils 래퍼 (기본 포함)
+    ├── ref_Error.bas          ← am_Error 래퍼 (기본 포함)
+    ├── tpl_Path.bas           ← 경로 관련 CWB 유틸리티 (필요시)
+    └── tpl_Test.bas           ← 테스트 프로시저 (필요시)
 ```
 
 ### 파일 규칙
@@ -68,13 +79,44 @@ corelib/
 | `am_Utils` | `am_Utils.bas` | 문자열, 배열, 날짜 등 순수 범용 유틸리티 |
 | `am_Error` | `am_Error.bas` | 공통 에러 핸들링 |
 
-### cwb 템플릿 모듈 목록
+### cwb 모듈 목록
+
+#### ref_ 모듈 (기본 포함 — am_ 1:1 래퍼, xlam 업데이트 시 교체)
+
+| 모듈 | 파일 | 대응 xlam 모듈 |
+|---|---|---|
+| `ref_Core` | `ref_Core.bas` | `am_Core` |
+| `ref_Path` | `ref_Path.bas` | `am_Path` |
+| `ref_File` | `ref_File.bas` | `am_File` |
+| `ref_DB` | `ref_DB.bas` | `am_DB` |
+| `ref_Excel` | `ref_Excel.bas` | `am_Excel` |
+| `ref_Range` | `ref_Range.bas` | `am_Range` |
+| `ref_Sheet` | `ref_Sheet.bas` | `am_Sheet` |
+| `ref_Table` | `ref_Table.bas` | `am_Table` |
+| `ref_Format` | `ref_Format.bas` | `am_Format` |
+| `ref_Utils` | `ref_Utils.bas` | `am_Utils` |
+| `ref_Error` | `ref_Error.bas` | `am_Error` |
+
+#### tpl_ 모듈 (필요시 작성 — CWB 비즈니스 로직)
 
 | 모듈 | 파일 | 역할 |
 |---|---|---|
 | `ThisWorkbook` | `현재_통합_문서.cls` | xlam 로드, 이벤트 처리 |
-| `tpl_Path` | `tpl_Path.bas` | `ResolvePath` 래퍼, 경로 관련 유틸리티 |
+| `tpl_Path` | `tpl_Path.bas` | 경로 관련 CWB 유틸리티 |
 | `tpl_Test` | `tpl_Test.bas` | 테스트 프로시저 모음 |
+
+#### ref_ 래퍼 규칙
+
+- 각 `ref_` 모듈은 대응하는 `am_` 모듈의 Public 프로시저를 `Application.Run` 으로 위임
+- `Private Const REF As String = "corelib.xlam!am_XXX."` 로 경로 일원화
+- `Range` 반환 함수 / `ParamArray` / `ByRef 배열` 파라미터는 래핑 불가 → 직접 `Application.Run` 사용
+- `ref_DB` 는 am_DB 상수(`DB_TYPE_*`)를 CWB 접근용으로 재선언
+
+```vba
+' 호출 예시
+SheetLock ActiveSheet, "1234"           ' ref_Sheet 래퍼 사용
+ReplacePath strPath, ThisWorkbook.Path, ThisWorkbook.FullName  ' ref_Path 래퍼 사용
+```
 
 ---
 
@@ -85,7 +127,8 @@ corelib/
 | 접두사 | 소속 | 의미 |
 |---|---|---|
 | `am_` | corelib.xlam | Add-in Macro |
-| `tpl_` | CWB 템플릿 | Template |
+| `ref_` | CWB (기본 포함) | Reference — am_ 래퍼, xlam 인터페이스 레이어 |
+| `tpl_` | CWB (필요시) | Template — CWB 비즈니스 로직 |
 
 ### 프로시저 접두사
 

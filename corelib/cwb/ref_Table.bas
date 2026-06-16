@@ -16,21 +16,25 @@ Private Const REF As String = "corelib.xlam!am_Table."
 ' ── 테이블 조회 ───────────────────────────────────────────────
 
 ' 목적   : 워크북 내 모든 시트의 ListObject 이름 배열 반환
-' 인수   : wb - 대상 워크북
+' 인수   : wb - 대상 워크북 (기본: ActiveWorkbook)
 ' 반환   : Variant - 테이블명 1차원 배열
-' 예시   : arr = GetAllSheetTableNames(ThisWorkbook)
-Public Function GetAllSheetTableNames(ByVal wb As Workbook) As Variant
+' 예시   : arr = GetAllSheetTableNames()
+'          arr = GetAllSheetTableNames(wbOther)
+Public Function GetAllSheetTableNames(Optional ByVal wb As Workbook = Nothing) As Variant
+    If wb Is Nothing Then Set wb = ActiveWorkbook
     GetAllSheetTableNames = Application.Run(REF & "GetAllSheetTableNames", wb)
 End Function
 
 ' 목적   : 시트 내 ListObject 이름 배열 반환 (특정 테이블 제외 가능)
-' 인수   : ws          - 대상 시트
-'          strPassName - 제외할 테이블명 (기본: 없음)
+' 인수   : strPassName - 제외할 테이블명 (기본: 없음)
+'          ws          - 대상 시트 (기본: ActiveSheet)
 ' 반환   : Variant - 테이블명 1차원 배열
-' 예시   : GetTableNames(Sheet1, "tbl_임시") → 임시 제외 테이블 목록
-Public Function GetTableNames(ByVal ws As Worksheet, _
-                              Optional ByVal strPassName As String = "") As Variant
-    GetTableNames = Application.Run(REF & "GetTableNames", ws, strPassName)
+' 예시   : GetTableNames()
+'          GetTableNames "tbl_임시", Sheet1
+Public Function GetTableNames(Optional ByVal strPassName As String = "", _
+                              Optional ByVal ws As Worksheet = Nothing) As Variant
+    If ws Is Nothing Then Set ws = ActiveSheet
+    GetTableNames = Application.Run(REF & "GetTableNames", strPassName, ws)
 End Function
 
 ' 목적   : 테이블 각 열 너비 배열 반환
@@ -147,27 +151,31 @@ End Function
 ' ── 테이블 필터 ───────────────────────────────────────────────
 
 ' 목적   : 테이블 특정 열에 단일 값 자동 필터 적용
-' 인수   : tbl       - 대상 ListObject
-'          fieldName - 필터 기준 열 이름 또는 번호
+' 인수   : fieldName - 필터 기준 열 이름 또는 번호
 '          strValue  - 필터 값 ("" 또는 "*": 전체 해제)
-' 예시   : AutoTableFilter(Sheet1.ListObjects("tbl_Data"), "상태", "완료")
-Public Sub AutoTableFilter(ByVal tbl As ListObject, _
-                           ByVal fieldName As Variant, _
-                           ByVal strValue As String)
-    Application.Run REF & "AutoTableFilter", tbl, fieldName, strValue
+'          tbl       - 대상 ListObject (기본: ActiveSheet 첫번째 테이블)
+' 예시   : AutoTableFilter "상태", "완료"
+'          AutoTableFilter "상태", "완료", tbl
+Public Sub AutoTableFilter(ByVal fieldName As Variant, _
+                           ByVal strValue As String, _
+                           Optional ByVal tbl As ListObject = Nothing)
+    If tbl Is Nothing Then Set tbl = ActiveSheet.ListObjects(1)
+    Application.Run REF & "AutoTableFilter", fieldName, strValue, tbl
 End Sub
 
 ' 목적   : 테이블 특정 열에 다중 값 배열로 자동 필터 적용
-' 인수   : tbl       - 대상 ListObject
-'          fieldName - 필터 기준 열 이름
+' 인수   : fieldName - 필터 기준 열 이름
 '          arrValues - 필터 값 배열
 '          blnPart   - True: 부분 일치 / False: 완전 일치 (기본: False)
-' 예시   : AutoTableFilter_Arr(tbl, "상태", Array("완료","대기"))
-Public Sub AutoTableFilter_Arr(ByVal tbl As ListObject, _
-                               ByVal fieldName As String, _
+'          tbl       - 대상 ListObject (기본: ActiveSheet 첫번째 테이블)
+' 예시   : AutoTableFilter_Arr "상태", Array("완료","대기")
+'          AutoTableFilter_Arr "상태", Array("완료","대기"), , tbl
+Public Sub AutoTableFilter_Arr(ByVal fieldName As String, _
                                ByVal arrValues As Variant, _
-                               Optional ByVal blnPart As Boolean = False)
-    Application.Run REF & "AutoTableFilter_Arr", tbl, fieldName, arrValues, blnPart
+                               Optional ByVal blnPart As Boolean = False, _
+                               Optional ByVal tbl As ListObject = Nothing)
+    If tbl Is Nothing Then Set tbl = ActiveSheet.ListObjects(1)
+    Application.Run REF & "AutoTableFilter_Arr", fieldName, arrValues, blnPart, tbl
 End Sub
 
 ' ── 테이블 정렬 ───────────────────────────────────────────────
