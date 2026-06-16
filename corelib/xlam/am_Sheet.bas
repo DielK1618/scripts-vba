@@ -185,11 +185,11 @@ End Sub
 ' 목적   : 시트 보호 설정
 '          서식 포함 사용 범위(ws.UsedRange) 내 배경색 없는 셀만 잠금 해제
 '          → 배경색 없는 셀 = 입력 가능 셀 규약
-' 인수   : strPW - 보호 비밀번호 (기본: LOCK_PW)
+' 인수   : strPW - 보호 비밀번호
 '          ws    - 보호할 시트 (기본: ActiveSheet)
-' 예시   : SheetLock
+' 예시   : SheetLock "pw"
 '          SheetLock "pw", Sheet2
-Public Sub SheetLock(Optional ByVal strPW As String = LOCK_PW, _
+Public Sub SheetLock(ByVal strPW As String, _
                      Optional ByVal ws As Worksheet = Nothing)
 
     If ws Is Nothing Then Set ws = ActiveSheet
@@ -281,11 +281,11 @@ CleanUp:
 End Sub
 
 ' 목적   : 시트 보호 해제
-' 인수   : strPW - 보호 비밀번호 (기본: LOCK_PW)
+' 인수   : strPW - 보호 비밀번호
 '          ws    - 해제할 시트 (기본: ActiveSheet)
-' 예시   : SheetUnLock
+' 예시   : SheetUnLock "pw"
 '          SheetUnLock "pw", Sheet2
-Public Sub SheetUnLock(Optional ByVal strPW As String = LOCK_PW, _
+Public Sub SheetUnLock(ByVal strPW As String, _
                        Optional ByVal ws As Worksheet = Nothing)
 
     If ws Is Nothing Then Set ws = ActiveSheet
