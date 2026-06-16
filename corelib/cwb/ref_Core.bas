@@ -6,7 +6,8 @@ Option Explicit
 ' │  역할 : am_Core Application.Run 래퍼                   │
 ' └─────────────────────────────────────────────────────────┘
 
-Private Const REF As String = "corelib.xlam!am_Core."
+Private Const REF     As String = "corelib.xlam!am_Core."
+Public  Const LOCK_PW As String = "1234"    ' SheetLock / WB_Lock 기본 비밀번호 — 프로젝트에 맞게 수정
 
 ' ── Application 상태 관리 ────────────────────────────────────
 
@@ -50,20 +51,22 @@ End Sub
 
 ' 목적   : 워크북 구조(시트 추가·삭제·이동) 보호
 ' 인수   : wb    - 보호할 워크북 (기본: ActiveWorkbook)
-'          strPW - 보호 비밀번호 (기본: 없음)
-' 예시   : WB_Lock ThisWorkbook, "1234"
-Public Sub WB_Lock(Optional ByVal wb As Workbook, _
-                   Optional ByVal strPW As String = "")
+'          strPW - 보호 비밀번호 (기본: LOCK_PW)
+' 예시   : WB_Lock
+'          WB_Lock ThisWorkbook, "pw"
+Public Sub WB_Lock(Optional ByVal wb As Workbook = Nothing, _
+                   Optional ByVal strPW As String = LOCK_PW)
     If wb Is Nothing Then Set wb = ActiveWorkbook
     Application.Run REF & "WB_Lock", wb, strPW
 End Sub
 
 ' 목적   : 워크북 구조 보호 해제
 ' 인수   : wb    - 해제할 워크북 (기본: ActiveWorkbook)
-'          strPW - 보호 비밀번호 (기본: 없음)
-' 예시   : WB_UnLock ThisWorkbook, "1234"
-Public Sub WB_UnLock(Optional ByVal wb As Workbook, _
-                     Optional ByVal strPW As String = "")
+'          strPW - 보호 비밀번호 (기본: LOCK_PW)
+' 예시   : WB_UnLock
+'          WB_UnLock ThisWorkbook, "pw"
+Public Sub WB_UnLock(Optional ByVal wb As Workbook = Nothing, _
+                     Optional ByVal strPW As String = LOCK_PW)
     If wb Is Nothing Then Set wb = ActiveWorkbook
     Application.Run REF & "WB_UnLock", wb, strPW
 End Sub

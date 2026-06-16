@@ -142,6 +142,7 @@
 
 | 날짜 | 내용 |
 |---|---|
+| 2026-06-16 | **LOCK_PW 상수 도입 — 시트/워크북 보호 기본 비밀번호**: am_Core에 `Public Const LOCK_PW As String = "1234"` 선언, SheetLock/SheetUnLock(am_Sheet) · WB_Lock/WB_UnLock(am_Core) strPW를 Optional로 변경(기본값 LOCK_PW). ref_Core에 동일 상수 선언, ref_Sheet/ref_Core 래퍼 동일 패턴 적용. 비밀번호 미입력 시 LOCK_PW 자동 사용, 필요 시 명시 전달 가능. |
 | 2026-06-16 | **Optional 파라미터 패턴 전체 적용** — ws/wb/tbl 필수 인수를 Optional로 변경(기본: ActiveSheet/ActiveWorkbook/ActiveSheet.ListObjects(1)), 파라미터 재정렬(Optional은 뒤로). 변경 대상: am_Sheet(8개), am_Table(4개), am_Excel(ExportSheetToCSV), am_DB(DelExcelRecQuery), ref_Sheet(8개), ref_Table(4개), ref_Excel(ExportSheetToCSV), ref_DB(DelExcelRecQuery). ref_ 래퍼는 Optional 해소 후 명시값 전달 패턴 적용. cwb ref_ 전 모듈(11개) 프로시저 헤더 주석 추가 — 목적/인수/반환/예시 형식 통일. am_Range.FindCellsByColor 버그 수정: Find(What:="") 이전 검색어 재사용 문제 → Find(What:="*") + SpecialCells(xlCellTypeBlanks) 하이브리드로 교체. am_Sheet.SheetLock 전면 재설계: (1) Interior.ColorIndex → Interior.Pattern 으로 변경(테마/RGB 색상 감지 누락 수정), (2) prv_GetUsedRange(내용 기반) → ws.UsedRange(서식 포함, 빈 회색 셀 포함)로 교체, (3) 셀 루프 잠금 → SearchFormat+SpecialCells 하이브리드로 최적화(내용셀 네이티브 Find, 빈셀만 루프, rngUnlock 벌크 일괄 해제) |
 | 2026-06-12 | corelib_manual.html 리뉴얼 완성 — Lamborghini 디자인(진블랙·골드), 반응형 드로어 사이드바, 전체 개요↔모듈 앵커 내비게이션, 누락 프로시저 42개 전체 문서화(am_DB 9개 포함, SelectExcelQuery·GetDbInfo 미구현 경고 표기) |
 | 2026-06-11 | corelib_manual_cd.html 신규 — corelib_manual.html 을 Claude Design 기반으로 리뉴얼한 사용자 매뉴얼 완성 |

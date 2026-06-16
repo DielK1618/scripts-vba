@@ -12,6 +12,7 @@ Public Const AM_VERSION   As String = "1.0.0"
 Public Const AM_NAME      As String = "corelib"
 Public Const AM_FILE      As String = "corelib.xlam"
 Public Const CM_TO_POINTS As Double = 28.3465   ' cm → Point 단위 변환
+Public Const LOCK_PW      As String = "1234"    ' SheetLock / WB_Lock 기본 비밀번호
 
 ' ── 2. 모듈 변수 선언 ────────────────────────────────────────
 Private m_blnReady As Boolean
@@ -153,10 +154,11 @@ End Sub
 
 ' 목적   : 워크북 구조(시트 추가·삭제·이동) 보호
 ' 인수   : wb    - 보호할 워크북 (기본: ActiveWorkbook)
-'          strPW - 보호 비밀번호 (기본: 없음)
-' 예시   : am_Core.WB_Lock ThisWorkbook, "1234"
-Public Sub WB_Lock(Optional ByVal wb  As Workbook, _
-                   Optional ByVal strPW As String = "")
+'          strPW - 보호 비밀번호 (기본: LOCK_PW)
+' 예시   : WB_Lock
+'          WB_Lock ThisWorkbook, "pw"
+Public Sub WB_Lock(Optional ByVal wb  As Workbook = Nothing, _
+                   Optional ByVal strPW As String = LOCK_PW)
 
     If wb Is Nothing Then Set wb = ActiveWorkbook
     wb.Protect Password:=strPW, Structure:=True
@@ -165,10 +167,11 @@ End Sub
 
 ' 목적   : 워크북 구조 보호 해제
 ' 인수   : wb    - 해제할 워크북 (기본: ActiveWorkbook)
-'          strPW - 보호 비밀번호 (기본: 없음)
-' 예시   : am_Core.WB_UnLock ThisWorkbook, "1234"
-Public Sub WB_UnLock(Optional ByVal wb  As Workbook, _
-                     Optional ByVal strPW As String = "")
+'          strPW - 보호 비밀번호 (기본: LOCK_PW)
+' 예시   : WB_UnLock
+'          WB_UnLock ThisWorkbook, "pw"
+Public Sub WB_UnLock(Optional ByVal wb  As Workbook = Nothing, _
+                     Optional ByVal strPW As String = LOCK_PW)
 
     If wb Is Nothing Then Set wb = ActiveWorkbook
     wb.Unprotect Password:=strPW
