@@ -171,7 +171,7 @@ End Sub
 ' ══════════════════════════════════════════════════════════
 
 ' 목적   : 시트 보호 설정
-'          실제 사용 범위 전체 잠금 후, 배경색 없는 셀만 잠금 해제
+'          서식 포함 사용 범위(ws.UsedRange) 내 배경색 없는 셀만 잠금 해제
 '          → 배경색 없는 셀 = 입력 가능 셀 규약
 ' 인수   : ws    - 보호할 시트
 '          strPW - 보호 비밀번호
@@ -182,6 +182,10 @@ Public Sub SheetLock(ByVal ws    As Worksheet, _
     Dim blnScreen  As Boolean
     Dim rngUsed    As Range
     Dim rngUnlock  As Range
+    Dim rngBlanks  As Range
+    Dim cel        As Range
+    Dim f          As Range
+    Dim strFirst   As String
 
     blnScreen = Application.ScreenUpdating
     Application.ScreenUpdating = False
@@ -190,20 +194,55 @@ Public Sub SheetLock(ByVal ws    As Worksheet, _
 
     On Error GoTo ErrHandler
 
-    Set rngUsed = prv_GetUsedRange(ws)
-
     ws.Unprotect Password:=strPW
 
-    If Not rngUsed Is Nothing Then
-        rngUsed.Locked        = True
-        rngUsed.FormulaHidden = True
+    ' 1. 시트 전체 잠금 (기본 상태: 모두 잠김)
+    ws.Cells.Locked        = True
+    ws.Cells.FormulaHidden = True
 
-        ' 배경색 없는 셀(xlNone) → 입력 가능 셀로 잠금 해제
-        Set rngUnlock = prv_FindCellsByColor(xlNone, rngUsed, True)
-        If Not rngUnlock Is Nothing Then
-            rngUnlock.Locked        = False
-            rngUnlock.FormulaHidden = False
-        End If
+    Set rngUsed = ws.UsedRange
+
+    ' 2a. 내용 있는 셀 — SearchFormat 으로 배경 없는 셀 일괄 수집 (네이티브, 빠름)
+    Application.FindFormat.Clear
+    Application.FindFormat.Interior.Pattern = xlNone
+
+    Set f = rngUsed.Find(What:="*", LookIn:=xlFormulas, LookAt:=xlPart, _
+                         SearchOrder:=xlByRows, SearchDirection:=xlNext, _
+                         SearchFormat:=True)
+    If Not f Is Nothing Then
+        strFirst      = f.Address
+        Set rngUnlock = f
+        Do
+            Set f = rngUsed.FindNext(f)
+            If f Is Nothing         Then Exit Do
+            If f.Address = strFirst Then Exit Do
+            Set rngUnlock = Union(rngUnlock, f)
+        Loop
+    End If
+
+    Application.FindFormat.Clear
+
+    ' 2b. 빈 셀 — SpecialCells 후 Pattern 체크 (빈 셀만 순회)
+    On Error Resume Next
+    Set rngBlanks = rngUsed.SpecialCells(xlCellTypeBlanks)
+    On Error GoTo 0
+
+    If Not rngBlanks Is Nothing Then
+        For Each cel In rngBlanks.Cells
+            If cel.Interior.Pattern = xlNone Then
+                If rngUnlock Is Nothing Then
+                    Set rngUnlock = cel
+                Else
+                    Set rngUnlock = Union(rngUnlock, cel)
+                End If
+            End If
+        Next cel
+    End If
+
+    ' 3. 배경 없는 셀 일괄 잠금 해제 (벌크 연산)
+    If Not rngUnlock Is Nothing Then
+        rngUnlock.Locked        = False
+        rngUnlock.FormulaHidden = False
     End If
 
     With ws
@@ -263,116 +302,4 @@ Private Function prv_GetExt(ByVal strFileName As String) As String
     prv_GetExt = Mid(strFileName, InStrRev(strFileName, "."))
 End Function
 
-' 목적   : 실제 사용 범위 계산 (내부 전용 — SheetLock 전용)
-' 참고   : am_Range.GetUsedRange 와 동일 로직, 모듈 독립성 원칙에 따라 내부 구현
-Private Function prv_GetUsedRange(ByVal ws As Worksheet) As Range
 
-    Dim rng         As Range
-    Dim rngFormulas As Range
-    Dim tbl         As ListObject
-    Dim shp         As Shape
-    Dim bFirst      As Boolean
-    Dim i           As Long
-    Dim lngMaxRow   As Long
-    Dim lngMaxCol   As Long
-
-    bFirst = True
-
-    On Error Resume Next
-
-    Set rng = ws.Cells.SpecialCells(xlCellTypeConstants)
-    bFirst  = (rng Is Nothing)
-
-    Set rngFormulas = ws.Cells.SpecialCells(xlCellTypeFormulas)
-    If Not rngFormulas Is Nothing Then
-        If bFirst Then
-            Set rng = rngFormulas
-            bFirst  = False
-        Else
-            Set rng = Union(rng, rngFormulas)
-        End If
-    End If
-
-    For Each tbl In ws.ListObjects
-        If bFirst Then
-            Set rng = tbl.Range
-            bFirst  = False
-        Else
-            Set rng = Union(rng, tbl.Range)
-        End If
-    Next tbl
-
-    For Each shp In ws.Shapes
-        Dim rngShape As Range
-        Set rngShape = ws.Range(shp.TopLeftCell, shp.BottomRightCell)
-        If bFirst Then
-            Set rng = rngShape
-            bFirst  = False
-        Else
-            Set rng = Union(rng, rngShape)
-        End If
-    Next shp
-
-    On Error GoTo 0
-
-    If rng Is Nothing Then Exit Function
-
-    lngMaxRow = 0
-    lngMaxCol = 0
-
-    For i = 1 To rng.Areas.Count
-        With rng.Areas(i)
-            If .Row    + .Rows.Count    - 1 > lngMaxRow Then lngMaxRow = .Row    + .Rows.Count    - 1
-            If .Column + .Columns.Count - 1 > lngMaxCol Then lngMaxCol = .Column + .Columns.Count - 1
-        End With
-    Next i
-
-    Set prv_GetUsedRange = ws.Range(ws.Cells(1, 1), ws.Cells(lngMaxRow, lngMaxCol))
-
-End Function
-
-' 목적   : 배경색 기준 셀 검색 (내부 전용 — SheetLock 전용)
-' 참고   : am_Range.FindCellsByColor 와 동일 로직, 모듈 독립성 원칙에 따라 내부 구현
-Private Function prv_FindCellsByColor(ByVal lngColor      As Long, _
-                                      ByVal rng            As Range, _
-                                      ByVal blnColorIndex  As Boolean) As Range
-
-    Dim f         As Range
-    Dim strFirst  As String
-    Dim rngResult As Range
-
-    Application.FindFormat.Clear
-
-    If blnColorIndex Then
-        Application.FindFormat.Interior.ColorIndex = lngColor
-    Else
-        Application.FindFormat.Interior.Color = lngColor
-    End If
-
-    On Error Resume Next
-
-    With rng
-        Set f = .Find(What:="", LookIn:=xlFormulas, _
-                      LookAt:=xlPart, SearchOrder:=xlByRows, _
-                      SearchDirection:=xlNext, SearchFormat:=True)
-
-        If Not f Is Nothing Then
-            strFirst = f.Address
-            Set rngResult = f
-
-            Do
-                Set f = .Find(What:="", After:=f, LookIn:=xlFormulas, _
-                              LookAt:=xlPart, SearchOrder:=xlByRows, _
-                              SearchDirection:=xlNext, SearchFormat:=True)
-                If f Is Nothing     Then Exit Do
-                If f.Address = strFirst Then Exit Do
-                Set rngResult = Union(rngResult, f)
-            Loop
-        End If
-    End With
-
-    On Error GoTo 0
-
-    If Not rngResult Is Nothing Then Set prv_FindCellsByColor = rngResult
-
-End Function

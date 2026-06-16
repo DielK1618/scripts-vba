@@ -25,6 +25,24 @@
 
 ### cwb_01.xlsm (`cwb/` 폴더)
 
+#### ref_ 모듈 (기본 포함 — am_ 래퍼)
+
+| 파일 | 모듈 | 상태 |
+|---|---|---|
+| `ref_Core.bas` | `ref_Core` | ✅ 완성 |
+| `ref_Path.bas` | `ref_Path` | ✅ 완성 |
+| `ref_File.bas` | `ref_File` | ✅ 완성 |
+| `ref_DB.bas` | `ref_DB` | ✅ 완성 |
+| `ref_Excel.bas` | `ref_Excel` | ✅ 완성 |
+| `ref_Range.bas` | `ref_Range` | ✅ 완성 |
+| `ref_Sheet.bas` | `ref_Sheet` | ✅ 완성 |
+| `ref_Table.bas` | `ref_Table` | ✅ 완성 |
+| `ref_Format.bas` | `ref_Format` | ✅ 완성 |
+| `ref_Utils.bas` | `ref_Utils` | ✅ 완성 |
+| `ref_Error.bas` | `ref_Error` | ✅ 완성 |
+
+#### tpl_ 모듈 (필요시 작성)
+
 | 파일 | 모듈 | 상태 | 비고 |
 |---|---|---|---|
 | `현재_통합_문서.cls` | `ThisWorkbook` | ✅ 완성 | |
@@ -78,7 +96,8 @@
 |---|---|
 | xlam 파일명 | `corelib.xlam` |
 | xlam 모듈 접두사 | `am_` (Add-in Macro) |
-| CWB 템플릿 모듈 접두사 | `tpl_` (Template) |
+| CWB ref_ 모듈 접두사 | `ref_` (Reference) — am_ 1:1 래퍼, 기본 포함 |
+| CWB tpl_ 모듈 접두사 | `tpl_` (Template) — CWB 비즈니스 로직, 필요시 작성 |
 | Private 함수 접두사 | `prv_` |
 | CWB 약자 | `CWB` (Client WorkBook) |
 | xlam 로드 방식 | `Workbooks.Open` (AddIns 등록 방식 ❌) |
@@ -102,7 +121,7 @@
 | Common.cls 이식 방식 | 일반 모듈로 이식 (클래스 불필요, Application.Run 미지원 문제) |
 | tpl_Procedure | ❌ CWB 전용 결정 (xlam에서 ThisWorkbook = xlam 자신, Trust Center 의존) |
 | frm_* 모듈 | ❌ CWB 전용 결정 (사용자 정의 폼은 특정 파일 종속) |
-| SheetLock 입력셀 규약 | 배경색 없는 셀(ColorIndex=xlNone) = 입력 가능 셀 |
+| SheetLock 입력셀 규약 | 배경색 없는 셀(Interior.Pattern=xlNone) = 입력 가능 셀 |
 
 ---
 
@@ -123,6 +142,7 @@
 
 | 날짜 | 내용 |
 |---|---|
+| 2026-06-16 | cwb ref_ 전 모듈(11개) 프로시저 헤더 주석 추가 — 목적/인수/반환/예시 형식 통일. am_Range.FindCellsByColor 버그 수정: Find(What:="") 이전 검색어 재사용 문제 → Find(What:="*") + SpecialCells(xlCellTypeBlanks) 하이브리드로 교체. am_Sheet.SheetLock 전면 재설계: (1) Interior.ColorIndex → Interior.Pattern 으로 변경(테마/RGB 색상 감지 누락 수정), (2) prv_GetUsedRange(내용 기반) → ws.UsedRange(서식 포함, 빈 회색 셀 포함)로 교체, (3) 셀 루프 잠금 → SearchFormat+SpecialCells 하이브리드로 최적화(내용셀 네이티브 Find, 빈셀만 루프, rngUnlock 벌크 일괄 해제) |
 | 2026-06-12 | corelib_manual.html 리뉴얼 완성 — Lamborghini 디자인(진블랙·골드), 반응형 드로어 사이드바, 전체 개요↔모듈 앵커 내비게이션, 누락 프로시저 42개 전체 문서화(am_DB 9개 포함, SelectExcelQuery·GetDbInfo 미구현 경고 표기) |
 | 2026-06-11 | corelib_manual_cd.html 신규 — corelib_manual.html 을 Claude Design 기반으로 리뉴얼한 사용자 매뉴얼 완성 |
 | 2026-06-11 | corelib_manual.html 신규 — 11개 모듈 전체 프로시저 설명·코드예시·사이드바·전체 개요 섹션(이름+한 줄 설명) 포함 HTML 매뉴얼 제작 |

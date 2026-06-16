@@ -52,10 +52,13 @@ Public Function FindCellsByColor(ByVal lngColor      As Long, _
                                  Optional ByVal rng           As Range, _
                                  Optional ByVal blnColorIndex As Boolean = True) As Range
 
-    Dim f          As Range
-    Dim strFirst   As String
-    Dim rngResult  As Range
-    Dim ws         As Worksheet
+    Dim f         As Range
+    Dim strFirst  As String
+    Dim rngResult As Range
+    Dim rngBlanks As Range
+    Dim cel       As Range
+    Dim blnMatch  As Boolean
+    Dim ws        As Worksheet
 
     If rng Is Nothing Then
         Set ws  = ActiveSheet
@@ -64,8 +67,9 @@ Public Function FindCellsByColor(ByVal lngColor      As Long, _
         Set ws  = rng.Parent
     End If
 
+    ' ── 내용 있는 셀: Excel 네이티브 Find (빠름) ──────────────────
+    ' Find(What:="") 는 이전 검색어 재사용 버그 → What:="*" 사용
     Application.FindFormat.Clear
-
     If blnColorIndex Then
         Application.FindFormat.Interior.ColorIndex = lngColor
     Else
@@ -75,7 +79,7 @@ Public Function FindCellsByColor(ByVal lngColor      As Long, _
     On Error Resume Next
 
     With rng
-        Set f = .Find(What:="", LookIn:=xlFormulas, _
+        Set f = .Find(What:="*", LookIn:=xlFormulas, _
                       LookAt:=xlPart, SearchOrder:=xlByRows, _
                       SearchDirection:=xlNext, SearchFormat:=True)
 
@@ -84,21 +88,40 @@ Public Function FindCellsByColor(ByVal lngColor      As Long, _
             Set rngResult = f
 
             Do
-                Set f = .Find(What:="", After:=f, LookIn:=xlFormulas, _
+                Set f = .Find(What:="*", After:=f, LookIn:=xlFormulas, _
                               LookAt:=xlPart, SearchOrder:=xlByRows, _
                               SearchDirection:=xlNext, SearchFormat:=True)
-
-                If f Is Nothing Then Exit Do
+                If f Is Nothing     Then Exit Do
                 If f.Address = strFirst Then Exit Do
-
                 Set rngResult = Union(rngResult, f)
             Loop
         End If
     End With
 
     On Error GoTo 0
-
     Application.FindFormat.Clear
+
+    ' ── 빈 셀: Find 로 탐색 불가 → SpecialCells 후 직접 확인 ─────
+    On Error Resume Next
+    Set rngBlanks = rng.SpecialCells(xlCellTypeBlanks)
+    On Error GoTo 0
+
+    If Not rngBlanks Is Nothing Then
+        For Each cel In rngBlanks.Cells
+            If blnColorIndex Then
+                blnMatch = (cel.Interior.ColorIndex = lngColor)
+            Else
+                blnMatch = (cel.Interior.Color = lngColor)
+            End If
+            If blnMatch Then
+                If rngResult Is Nothing Then
+                    Set rngResult = cel
+                Else
+                    Set rngResult = Union(rngResult, cel)
+                End If
+            End If
+        Next cel
+    End If
 
     If Not rngResult Is Nothing Then Set FindCellsByColor = rngResult
 
