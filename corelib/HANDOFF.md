@@ -10,7 +10,7 @@ Excel VBA 범용 라이브러리 `corelib.xlam` 제작 프로젝트.
 CWB(Client WorkBook)에서 `Workbooks.Open` 방식으로 xlam을 로드하고
 `Application.Run "corelib.xlam!모듈.함수"` 방식으로 호출.
 
-**프로젝트 경로:** `d:\CLOUD\OneDrive\DIEL_VAULT\DEVELOPMENT\Git\Excel-VBA\corelib\`
+**프로젝트 경로:** `d:\CLOUD\OneDrive\DIEL_VAULT\DEVELOPMENT\Git\scripts-vba\corelib\`
 
 ---
 
