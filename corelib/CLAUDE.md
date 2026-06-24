@@ -2,6 +2,8 @@
 
 > 진행 현황, 작업 로그, 모듈별 완성 상태는 `LOG.md` 를 참고하세요.
 
+> **트러블슈팅**: 작업 전 또는 오류 발생 시 → [`../TROUBLESHOOTING.md`](../TROUBLESHOOTING.md) 먼저 확인. 없으면 LOG.md → 웹 검색 순으로 진행. 해결 후 반드시 `TROUBLESHOOTING.md`에 추가.
+
 ---
 
 ## 1. 프로젝트 개요
@@ -473,3 +475,4 @@ Public Const DB_TYPE_ACCESS As String = "엑세스"
 - 중복 함수 발견 시 통합 또는 제거 후 알림
 - 시트 참조 코드는 가능한 VBA 내부로 전환, 방향이 애매하면 먼저 협의
 - 진행 현황 및 결정 사항은 `LOG.md` 에 기록
+- 새로운 오류/해결책 발생 시 `../TROUBLESHOOTING.md` 에 추가
