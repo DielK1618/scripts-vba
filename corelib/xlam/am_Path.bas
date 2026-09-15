@@ -15,26 +15,39 @@ Private m_dicTokens As Object
 
 ' 목적   : 토큰이 포함된 경로를 실제 로컬 경로로 반환
 ' 인수   : strPath        - 변환할 경로 (토큰 포함 가능)
-'          strCwbPath     - 호출한 CWB 의 폴더 경로
-'          strCwbFile     - 호출한 CWB 의 전체 파일 경로
-'          blnChangeDrive - True: 드라이브를 CWB 드라이브로 강제 교체
-'          blnAddDrive    - True: 드라이브 없는 경로에 CWB 드라이브 추가
-' 반환   : String - 변환된 로컬 경로, 실패 시 ""
-' 예시   : am_Path.ReplacePath("{cPath}\DB\main.accdb", _
-'                               ThisWorkbook.Path, _
-'                               ThisWorkbook.FullName)
+'          blnChangeDrive - True: 드라이브를 CWB 드라이브로 강제 교체 (UNC 경로 제외)
+'          blnAddDrive    - True: 드라이브 없는 경로에 CWB 드라이브 추가 (UNC 경로 제외)
+'          blnCreate      - True: 폴더가 없으면 생성
+'                           끝이 "\" → 경로 전체를 폴더로 생성 / 아니면 부모 폴더만 생성
+'          strCwbFile     - 호출한 CWB 의 전체 파일 경로 (폴더 경로 불가)
+'                           {cFile} 치환, {cPath}·CWB 드라이브 파싱에 사용
+' 반환   : String - 변환된 경로, 실패 시 ""
+'                   드라이브·공유 루트가 접근 가능하면 존재하지 않는 경로도 반환
+'                   "" = 경로로 쓸 수 없음 (드라이브·공유 루트 접근 불가, 폴더 생성 실패)
+' 예시   : am_Path.ReplacePath("{cPath}\DB\main.accdb", False, True, False, ThisWorkbook.FullName)
+'          ref_Path 래퍼 사용 시 → ReplacePath("{cPath}\DB\main.accdb")
+'                                  ReplacePath("{cPath}\00_Bak\", blnCreate:=True)
 Public Function ReplacePath(ByVal strPath As String, _
-                            ByVal strCwbPath As String, _
-                            ByVal strCwbFile As String, _
                             Optional ByVal blnChangeDrive As Boolean = False, _
-                            Optional ByVal blnAddDrive As Boolean = True) As String
+                            Optional ByVal blnAddDrive As Boolean = True, _
+                            Optional ByVal blnCreate As Boolean = False, _
+                            Optional ByVal strCwbFile As String = "") As String
 
     On Error GoTo ErrHandler
 
     If strPath = "" Then Exit Function
 
-    Dim strOriginal As String
-    strOriginal = strPath
+    If strCwbFile = "" Then
+        MsgBox "[am_Path.ReplacePath] CWB 파일 경로(strCwbFile)가 전달되지 않았습니다." & vbCrLf & _
+               "경로: " & strPath, vbCritical, am_Core.AM_NAME
+        Exit Function
+    End If
+
+    Dim strCwbPath As String
+
+    ' ── 0. CWB 경로 정규화 및 폴더 파싱 ──────────────────────
+    strCwbFile = NormalizeLocalPath(strCwbFile)
+    strCwbPath = prv_ParentPath(strCwbFile)
 
     ' ── 1. 고정 토큰 치환 ────────────────────────────────────
     strPath = prv_ResolveFixedTokens(strPath, strCwbPath, strCwbFile)
@@ -43,7 +56,7 @@ Public Function ReplacePath(ByVal strPath As String, _
     strPath = prv_ResolveCustomTokens(strPath)
 
     ' ── 3. 네트워크 드라이브 치환 ────────────────────────────
-    strPath = prv_ProcessNetworkDrives(strPath, strCwbPath)
+    strPath = prv_ProcessNetworkDrives(strPath)
 
     ' ── 4. 클라우드 경로 변환 ────────────────────────────────
     strPath = prv_ProcessCloudPaths(strPath)
@@ -55,7 +68,12 @@ Public Function ReplacePath(ByVal strPath As String, _
     strPath = prv_ProcessDriveMapping(strPath, strCwbPath, blnChangeDrive, blnAddDrive)
 
     ' ── 7. 유효성 검증 및 드라이브 추정 ─────────────────────
-    strPath = prv_ValidateAndFixDrive(strPath)
+    strPath = prv_ValidateAndFixDrive(strPath, strCwbPath)
+
+    ' ── 8. 폴더 생성 ─────────────────────────────────────────
+    If blnCreate And strPath <> "" Then
+        If Not prv_EnsureFolder(strPath) Then strPath = ""
+    End If
 
     ReplacePath = strPath
     Exit Function
@@ -65,6 +83,26 @@ ErrHandler:
            "오류 " & Err.Number & ": " & Err.Description & vbCrLf & _
            "경로: " & strPath, vbCritical, am_Core.AM_NAME
     ReplacePath = ""
+
+End Function
+
+' 목적   : 네트워크(UNC)·OneDrive URL 경로를 로컬 경로로 정규화 (폴더/파일 공용)
+' 인수   : strPath - 정규화할 경로 (예: ThisWorkbook.Path, ThisWorkbook.FullName)
+' 반환   : String - 로컬 경로 (슬래시 → 백슬래시, 끝 "\" 제거)
+'                   변환 대상이 아니면 입력 모양 유지
+' 참고   : 드라이브 보정·유효성 추정은 하지 않음 (CWB 경로 자체가 보정 기준이므로)
+' 예시   : NormalizeLocalPath("D:\Work\")                       → "D:\Work"
+'          NormalizeLocalPath("\\server\share\cwb.xlsm")         → "Z:\cwb.xlsm" (Z: 매핑 시)
+'          NormalizeLocalPath("https://d.docs.live.net/ID/Work") → "C:\Users\...\OneDrive\Work"
+Public Function NormalizeLocalPath(ByVal strPath As String) As String
+
+    If strPath = "" Then Exit Function
+
+    strPath = prv_ProcessNetworkDrives(strPath)
+    strPath = prv_ProcessCloudPaths(strPath)
+    strPath = prv_NormalizePath(strPath)
+
+    NormalizeLocalPath = prv_TrimTrailingSep(strPath)
 
 End Function
 
@@ -133,8 +171,7 @@ End Sub
 ' ══════════════════════════════════════════════════════════
 
 ' 목적   : UNC 경로를 매핑된 드라이브 문자로 치환
-Private Function prv_ProcessNetworkDrives(ByVal strPath As String, _
-                                          ByVal strCwbPath As String) As String
+Private Function prv_ProcessNetworkDrives(ByVal strPath As String) As String
 
     On Error Resume Next
 
@@ -150,8 +187,6 @@ Private Function prv_ProcessNetworkDrives(ByVal strPath As String, _
 
     For i = 0 To objDrives.Count - 1 Step 2
         If objDrives.Item(i + 1) <> "" Then
-            strCwbPath = Replace(strCwbPath, objDrives.Item(i + 1), _
-                                 objDrives.Item(i), , , vbTextCompare)
             strPath = Replace(strPath, objDrives.Item(i + 1), _
                               objDrives.Item(i), , , vbTextCompare)
         End If
@@ -219,8 +254,20 @@ Private Function prv_ProcessDriveMapping(ByVal strPath As String, _
 
     On Error Resume Next
 
+    ' UNC 경로(\\서버\공유)는 드라이브 보정 대상 아님
+    If Left(strPath, 2) = "\\" Then
+        prv_ProcessDriveMapping = strPath
+        Exit Function
+    End If
+
     Dim strCwbDrive As String
-    strCwbDrive = Left(strCwbPath, InStr(strCwbPath, ":"))
+    If Mid(strCwbPath, 2, 1) = ":" Then strCwbDrive = Left(strCwbPath, 2)
+
+    ' CWB 가 드라이브 문자로 시작하지 않으면(UNC 등) 보정 기준이 없으므로 생략
+    If strCwbDrive = "" Then
+        prv_ProcessDriveMapping = strPath
+        Exit Function
+    End If
 
     If blnChangeDrive Then
         If InStr(strPath, ":") > 0 Then
@@ -239,12 +286,20 @@ Private Function prv_ProcessDriveMapping(ByVal strPath As String, _
 
 End Function
 
-' 목적   : 경로 유효성 검사, 실패 시 A~Z 드라이브 순서로 추정
-Private Function prv_ValidateAndFixDrive(ByVal strPath As String) As String
+' 목적   : 경로 유효성 검사, 실패 시 CWB 드라이브 → A~Z 드라이브 순서로 추정
+' 참고   : UNC 경로는 공유 루트 접근 가능 여부로만 판정 (드라이브 추정 안 함)
+Private Function prv_ValidateAndFixDrive(ByVal strPath As String, _
+                                         ByVal strCwbPath As String) As String
 
     ' 경로가 실제로 존재하면 그대로 반환
     If prv_IsValidPath(strPath) Then
         prv_ValidateAndFixDrive = strPath
+        Exit Function
+    End If
+
+    ' UNC: 공유 루트가 접근 가능하면 반환 (생성 전 하위 경로 허용), 불가면 ""
+    If Left(strPath, 2) = "\\" Then
+        If prv_IsUncShareAccessible(strPath) Then prv_ValidateAndFixDrive = strPath
         Exit Function
     End If
 
@@ -256,7 +311,7 @@ Private Function prv_ValidateAndFixDrive(ByVal strPath As String) As String
     End If
 
     Dim strFixed As String
-    strFixed = prv_ReplaceWithCwbDrive(strPath)
+    strFixed = prv_ReplaceWithCwbDrive(strPath, strCwbPath)
     If prv_IsValidPath(strFixed) Then
         prv_ValidateAndFixDrive = strFixed
         Exit Function
@@ -456,16 +511,120 @@ Private Function prv_URLDecode(ByVal strEncoded As String) As String
     prv_URLDecode = strEncoded
 End Function
 
-Private Function prv_ReplaceWithCwbDrive(ByVal strPath As String) As String
+' 목적   : 파일 경로에서 폴더 경로 추출 ("\", "/" 모두 인식)
+' 예시   : prv_ParentPath("D:\Work\cwb.xlsm") → "D:\Work"
+'          prv_ParentPath("D:\cwb.xlsm")      → "D:"
+'          prv_ParentPath("Book1")            → "" (저장 전 통합문서)
+Private Function prv_ParentPath(ByVal strFile As String) As String
+
+    Dim lngPos As Long
+    lngPos = InStrRev(strFile, "\")
+    If InStrRev(strFile, "/") > lngPos Then lngPos = InStrRev(strFile, "/")
+
+    If lngPos > 0 Then prv_ParentPath = Left(strFile, lngPos - 1)
+
+End Function
+
+' 목적   : 경로 끝의 구분자("\") 1개 제거
+' 예시   : prv_TrimTrailingSep("D:\Work\") → "D:\Work"
+'          prv_TrimTrailingSep("D:\")      → "D:"
+Private Function prv_TrimTrailingSep(ByVal strPath As String) As String
+
+    If Len(strPath) > 1 And Right(strPath, 1) = "\" Then
+        strPath = Left(strPath, Len(strPath) - 1)
+    End If
+
+    prv_TrimTrailingSep = strPath
+
+End Function
+
+' 목적   : UNC 경로의 공유 루트(\\서버\공유) 접근 가능 여부 확인 (하위 경로 존재 여부 무관)
+' 예시   : prv_IsUncShareAccessible("\\NAS01\자료\신규폴더") → \\NAS01\자료 접근 가능 시 True
+'          prv_IsUncShareAccessible("\\서버명\공유폴더")    → False (없는 서버)
+Private Function prv_IsUncShareAccessible(ByVal strPath As String) As Boolean
+
+    Dim arrParts As Variant
+    Dim lngBase  As Long
+    Dim objFSO   As Object
+
+    If Left(strPath, 2) <> "\\" Then Exit Function
+
+    arrParts = Split(Mid(strPath, 3), "\")
+    lngBase = LBound(arrParts)
+    If UBound(arrParts) < lngBase + 1 Then Exit Function
+    If arrParts(lngBase) = "" Or arrParts(lngBase + 1) = "" Then Exit Function
+
+    On Error Resume Next
+    Set objFSO = CreateObject("Scripting.FileSystemObject")
+    prv_IsUncShareAccessible = objFSO.FolderExists("\\" & arrParts(lngBase) & "\" & arrParts(lngBase + 1))
+    Set objFSO = Nothing
+    On Error GoTo 0
+
+End Function
+
+' 목적   : blnCreate 처리 — 끝이 "\" 면 경로 전체를 폴더로, 아니면 부모 폴더만 생성
+' 반환   : Boolean - True: 폴더 존재(기존 또는 생성 성공) / False: 생성 실패
+' 예시   : prv_EnsureFolder("D:\Out\2026\")      → D:\Out\2026 생성
+'          prv_EnsureFolder("D:\Out\report.pdf") → D:\Out 생성
+Private Function prv_EnsureFolder(ByVal strPath As String) As Boolean
+
+    Dim strFolder As String
+
+    If Right(strPath, 1) = "\" Then
+        strFolder = prv_TrimTrailingSep(strPath)
+    Else
+        strFolder = prv_ParentPath(strPath)
+    End If
+
+    If strFolder = "" Then Exit Function
+
+    prv_EnsureFolder = prv_MkFolder(strFolder)
+
+End Function
+
+' 목적   : 폴더 재귀 생성 (중간 경로 포함)
+' 반환   : Boolean - True: 폴더 존재(기존 또는 생성 성공) / False: 생성 실패
+Private Function prv_MkFolder(ByVal strFolder As String) As Boolean
+
+    Dim objFSO    As Object
+    Dim strParent As String
+
+    On Error GoTo ErrHandler
+
+    Set objFSO = CreateObject("Scripting.FileSystemObject")
+
+    If Not objFSO.FolderExists(strFolder) Then
+        strParent = objFSO.GetParentFolderName(strFolder)
+        If strParent <> "" And Not objFSO.FolderExists(strParent) Then
+            If Not prv_MkFolder(strParent) Then GoTo CleanUp
+        End If
+        objFSO.CreateFolder strFolder
+    End If
+
+    prv_MkFolder = True
+    GoTo CleanUp
+
+ErrHandler:
+    prv_MkFolder = False
+
+CleanUp:
+    On Error Resume Next
+    Set objFSO = Nothing
+
+End Function
+
+' 목적   : 드라이브 문자를 CWB 드라이브로 교체 (CWB 가 드라이브 문자로 시작하지 않으면 원본 반환)
+Private Function prv_ReplaceWithCwbDrive(ByVal strPath As String, _
+                                         ByVal strCwbPath As String) As String
 
     On Error Resume Next
 
-    If InStr(strPath, ":") = 0 Then
+    If InStr(strPath, ":") = 0 Or Mid(strCwbPath, 2, 1) <> ":" Then
         prv_ReplaceWithCwbDrive = strPath
         Exit Function
     End If
 
-    prv_ReplaceWithCwbDrive = Left(am_Core.XlamPath, 2) & Mid(strPath, 3)
+    prv_ReplaceWithCwbDrive = Left(strCwbPath, 2) & Mid(strPath, 3)
 
     On Error GoTo 0
 

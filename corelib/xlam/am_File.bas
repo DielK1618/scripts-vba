@@ -11,43 +11,53 @@ Option Explicit
 ' ══════════════════════════════════════════════════════════
 
 ' 목적   : 파일/폴더 선택 다이얼로그 호출
-' 인수   : strCwbPath     - 호출한 CWB 폴더 경로
-'          DilogType      - 다이얼로그 종류 (기본: msoFileDialogFilePicker)
-'          strInitPath    - 초기 열기 경로 (기본: CWB 경로)
+' 인수   : DilogType      - 다이얼로그 종류 (기본: msoFileDialogFilePicker)
+'          strInitPath    - 초기 열기 폴더 (기본: CWB 폴더)
 '          blnMultiSelect - True: 다중 선택 허용
 '          strExtComment  - 확장자 설명
 '          strFileName    - 초기 파일명
 '          strExt         - 확장자 필터 (기본: *.*)
 '          strCancelPath  - 취소 시 사용할 기본 경로
-'          blnToken       - True: 반환 경로를 {cPath} 토큰으로 역치환
-' 반환   : String - 선택된 경로 (다중 선택 시 ";" 로 연결)
-' 예시   : GetPath(ThisWorkbook.Path)
-'          Split(GetPath(ThisWorkbook.Path, blnMultiSelect:=True), ";")
-Public Function GetPath(ByVal strCwbPath As String, _
-                        Optional ByVal DilogType As MsoFileDialogType = msoFileDialogFilePicker, _
+'          blnToken       - True: 반환 경로 중 CWB 폴더 부분을 {cPath} 토큰으로 역치환
+'          strCwbPath     - 호출한 CWB 폴더 경로 (로컬 경로로 정규화된 값, 파일 경로 불가)
+'                           strInitPath 생략 또는 blnToken = True 일 때 필수
+' 반환   : String - 선택된 경로 (다중 선택 시 ";" 로 연결), 취소 시 ""
+' 예시   : GetPath(strCwbPath:=ThisWorkbook.Path)
+'          ref_File 래퍼 사용 시 strCwbPath 생략 → GetPath(), Split(GetPath(blnMultiSelect:=True), ";")
+Public Function GetPath(Optional ByVal DilogType As MsoFileDialogType = msoFileDialogFilePicker, _
                         Optional ByVal strInitPath As String = "", _
                         Optional ByVal blnMultiSelect As Boolean = False, _
                         Optional ByVal strExtComment As String = "Select Item", _
                         Optional ByVal strFileName As String = "", _
                         Optional ByVal strExt As String = "*.*", _
                         Optional ByVal strCancelPath As String = "", _
-                        Optional ByVal blnToken As Boolean = True) As String
+                        Optional ByVal blnToken As Boolean = True, _
+                        Optional ByVal strCwbPath As String = "") As String
 
     Dim fdg           As FileDialog
     Dim arrSelected() As String
     Dim i             As Integer
 
-    Set fdg = Application.FileDialog(DilogType)
+    strCwbPath = prv_TrimTrailingSep(strCwbPath)
     If strInitPath = "" Then strInitPath = strCwbPath
+    strInitPath = prv_TrimTrailingSep(strInitPath)
+
+    If strCwbPath = "" And (strInitPath = "" Or blnToken) Then
+        MsgBox "[am_File.GetPath] CWB 폴더 경로(strCwbPath)가 전달되지 않았습니다.", _
+               vbCritical, am_Core.AM_NAME
+        Exit Function
+    End If
+
+    Set fdg = Application.FileDialog(DilogType)
 
     With fdg
         On Error Resume Next
         .Filters.Clear
         .Filters.Add strExtComment, strExt
         .InitialView = msoFileDialogViewLargeIcons
-        .InitialFileName = strInitPath
         .AllowMultiSelect = blnMultiSelect
-        .InitialFileName = strFileName
+        ' 폴더와 파일명을 한 번에 지정 (따로 지정하면 뒤의 값이 폴더를 덮어씀)
+        .InitialFileName = strInitPath & "\" & strFileName
         On Error GoTo 0
 
         ' ── 선택 완료 ────────────────────────────────────────
@@ -55,6 +65,7 @@ Public Function GetPath(ByVal strCwbPath As String, _
             ReDim arrSelected(1 To .SelectedItems.Count)
             For i = 1 To .SelectedItems.Count
                 arrSelected(i) = .SelectedItems(i)
+                If blnToken Then arrSelected(i) = prv_ToCwbToken(arrSelected(i), strCwbPath)
             Next i
             GetPath = Join(arrSelected, ";")
 
@@ -71,11 +82,6 @@ Public Function GetPath(ByVal strCwbPath As String, _
             End If
         End If
     End With
-
-    ' ── 반환 {cPath} 토큰 역치환 ─────────────────────────────
-    If blnToken Then
-        GetPath = Replace(LCase(GetPath), LCase(strCwbPath), "{cPath}")
-    End If
 
     Set fdg = Nothing
 
@@ -278,5 +284,43 @@ Public Function GetFilesList(ByVal strPath As String, _
     Set objFSO = Nothing
 
     GetFilesList = arrFiles
+
+End Function
+
+' ══════════════════════════════════════════════════════════
+'  PRIVATE - 보조 함수
+' ══════════════════════════════════════════════════════════
+
+' 목적   : 경로가 CWB 폴더로 시작하면 해당 부분을 {cPath} 토큰으로 치환
+'          (대소문자 무시 비교, 원본 대소문자 보존, 폴더 경계 확인)
+' 예시   : prv_ToCwbToken("D:\Work\DB\a.accdb", "D:\Work") → "{cPath}\DB\a.accdb"
+'          prv_ToCwbToken("D:\Work2\a.accdb", "D:\Work")  → "D:\Work2\a.accdb"
+Private Function prv_ToCwbToken(ByVal strPath As String, _
+                                ByVal strCwbPath As String) As String
+
+    Dim lngLen As Long
+    lngLen = Len(strCwbPath)
+    prv_ToCwbToken = strPath
+
+    If lngLen = 0 Then Exit Function
+    If StrComp(Left(strPath, lngLen), strCwbPath, vbTextCompare) <> 0 Then Exit Function
+    If Len(strPath) > lngLen Then
+        If Mid(strPath, lngLen + 1, 1) <> "\" Then Exit Function
+    End If
+
+    prv_ToCwbToken = "{cPath}" & Mid(strPath, lngLen + 1)
+
+End Function
+
+' 목적   : 경로 끝의 구분자("\") 1개 제거
+' 예시   : prv_TrimTrailingSep("D:\Work\") → "D:\Work"
+'          prv_TrimTrailingSep("D:\")      → "D:"
+Private Function prv_TrimTrailingSep(ByVal strPath As String) As String
+
+    If Len(strPath) > 1 And Right(strPath, 1) = "\" Then
+        strPath = Left(strPath, Len(strPath) - 1)
+    End If
+
+    prv_TrimTrailingSep = strPath
 
 End Function

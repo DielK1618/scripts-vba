@@ -117,11 +117,13 @@ corelib/
 - `Private Const REF As String = "corelib.xlam!am_XXX."` 로 경로 일원화
 - `Range` 반환 함수 / `ParamArray` / `ByRef 배열` 파라미터는 래핑 불가 → 직접 `Application.Run` 사용
 - `ref_DB` 는 am_DB 상수(`DB_TYPE_*`)를 CWB 접근용으로 재선언
+- CWB 인수(`strCwbPath` / `strCwbFile`)는 래퍼가 기본값 자동 입력 (§6 CWB 경로 전달)
+  - 정규화가 필요한 경우 `am_Path.NormalizeLocalPath` 를 직접 `Application.Run` (1:1 규칙 예외, 예: `ref_File.GetPath`)
 
 ```vba
 ' 호출 예시
-SheetLock ActiveSheet, "1234"           ' ref_Sheet 래퍼 사용
-ReplacePath strPath, ThisWorkbook.Path, ThisWorkbook.FullName  ' ref_Path 래퍼 사용
+SheetLock ActiveSheet, "1234"                     ' ref_Sheet 래퍼 사용
+strPath = ReplacePath("{cPath}\DB\main.accdb")    ' ref_Path 래퍼 사용 (CWB 파일 자동 입력)
 ```
 
 ---
@@ -314,13 +316,30 @@ End Sub
 
 - CWB 를 구분할 때 **프로시저 인수에 명시적으로 전달**
 - `RegisterWB` 딕셔너리 방식 사용 안 함 (오류 시 초기화 문제)
+- 인수는 프로시저가 필요한 정보에 따라 **하나만** 받음
+  - 폴더만 필요 → `strCwbPath` (래퍼 기본값: `ThisWorkbook.Path` 정규화 값)
+  - 파일명 필요 → `strCwbFile` (래퍼 기본값: `ThisWorkbook.FullName`)
+  - 둘 다 받는 프로시저 금지 — 폴더는 `strCwbFile` 에서 파싱
+- 위치: **맨 마지막 Optional**
+- 폴더 파싱: `strCwbFile` 을 받는 프로시저에서만 (`\`, `/` 모두 인식)
+  - `strCwbFile` 에 폴더 경로 입력 금지 (`D:\Test` → 폴더 `D:` 로 오파싱)
+- 폴더 경로 표기: 끝 `\` 제거로 통일 (`D:\Test\` → `D:\Test`, `D:\` → `D:`)
+- am_ 에 CWB 인수가 비어 들어오면: MsgBox 후 `""` 반환 (`ActiveWorkbook` 추정 금지)
+- 정규화 (UNC·OneDrive URL → 로컬 경로)
+  - `am_Path` 프로시저: 내부에서 `NormalizeLocalPath` 처리
+  - 그 외 am_ 모듈: 정규화된 값을 인수로 받음 → ref_ 래퍼가 `am_Path.NormalizeLocalPath` 호출 후 전달
 
 ```vba
-' ✅ CWB 경로 명시적 전달
-Application.Run "corelib.xlam!am_Path.ReplacePath", _
-                strPath, _
-                ThisWorkbook.Path, _
-                ThisWorkbook.FullName
+' ✅ ref_ 래퍼 사용 — CWB 인수 생략
+strPath = ReplacePath("{cPath}\DB\main.accdb")
+strFile = GetPath()
+
+' ✅ am_ 직접 호출 — CWB 인수 명시 (Application.Run 은 중간 인수 생략 대신 값 명시)
+strPath = Application.Run("corelib.xlam!am_Path.ReplacePath", _
+                          "{cPath}\DB\main.accdb", False, True, False, ThisWorkbook.FullName)
+
+' ✅ 없으면 폴더 생성 — 끝이 "\" 면 경로 전체, 아니면 부모 폴더만
+strBak = ReplacePath("{cPath}\00_Bak\", blnCreate:=True)
 ```
 
 ### Late Binding

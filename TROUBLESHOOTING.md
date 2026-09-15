@@ -134,6 +134,34 @@ If objFSO.FolderExists(strPath) Then
 End If
 ```
 
+### TS-V18 · `ReplacePath` — UNC 경로에 CWB 드라이브가 붙어 `H:\\서버\공유` 반환
+
+**증상**: `ReplacePath("\\서버명\공유폴더")` 결과가 `""` 가 아니라 `H:\\서버명\공유폴더`. 테스트는 "결과가 비어있지 않음"만 확인해 OK 로 통과
+
+**원인**:
+1. `blnAddDrive`(기본 True)가 `:` 없는 경로에 CWB 드라이브를 붙이는데, UNC(`\\`)도 `:` 가 없어 대상이 됨
+2. 붙은 결과 `H:\\...` 의 드라이브 `H:` 가 살아 있어 "드라이브 접근 가능 → 생성 전 경로 허용" 규칙을 통과
+3. 이식 전 원본에도 있던 버그 — 원본은 존재하지 않는 경로 전체를 `""` 처리해서 가려져 있었고, 새 폴더 경로 허용으로 완화(2026-06-10)하며 드러남
+
+**해결**:
+- UNC 는 드라이브 교체·추가 대상에서 제외
+- UNC 유효성은 공유 루트(`\\서버\공유`) 접근 여부로 판정 — 접근 가능하면 없는 하위 경로도 반환, 불가면 `""`
+- 공유 루트 확인은 `Dir` 대신 FSO `FolderExists`
+
+```vba
+If Left(strPath, 2) = "\\" Then
+    If prv_IsUncShareAccessible(strPath) Then prv_ValidateAndFixDrive = strPath
+    Exit Function
+End If
+```
+
+**재발 방지**:
+- 경로 판정 테스트는 "비어있지 않음"이 아니라 **예상값 비교**로 작성
+- 가상 경로 테스트만으로 끝내지 말고 실제 UNC(`\\localhost\C$`)·매핑 드라이브 케이스를 함께 둔다 (환경 없으면 건너뜀)
+- 드라이브 문자를 다루는 로직은 항상 "드라이브 없는 경로 = 상대 경로"와 "UNC"를 구분한다
+
+**적용 프로젝트**: scripts-vba / corelib (`am_Path`)
+
 ---
 
 ## Range / 검색

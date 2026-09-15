@@ -14,30 +14,35 @@ Private Const REF As String = "corelib.xlam!am_File."
 ' ── 다이얼로그 ────────────────────────────────────────────────
 
 ' 목적   : 파일/폴더 선택 다이얼로그 호출
-' 인수   : strCwbPath     - 호출한 CWB 폴더 경로
-'          DilogType      - 다이얼로그 종류 (기본: msoFileDialogFilePicker)
-'          strInitPath    - 초기 열기 경로 (기본: CWB 경로)
+' 인수   : DilogType      - 다이얼로그 종류 (기본: msoFileDialogFilePicker)
+'          strInitPath    - 초기 열기 폴더 (기본: CWB 폴더)
 '          blnMultiSelect - True: 다중 선택 허용
 '          strExtComment  - 확장자 설명
 '          strFileName    - 초기 파일명
 '          strExt         - 확장자 필터 (기본: *.*)
 '          strCancelPath  - 취소 시 사용할 기본 경로
-'          blnToken       - True: 반환 경로를 {cPath} 토큰으로 역치환
-' 반환   : String - 선택된 경로 (다중 선택 시 ";" 로 연결)
-' 예시   : GetPath(ThisWorkbook.Path)
-'          Split(GetPath(ThisWorkbook.Path, blnMultiSelect:=True), ";")
-Public Function GetPath(ByVal strCwbPath As String, _
-                        Optional ByVal DilogType As MsoFileDialogType = msoFileDialogFilePicker, _
+'          blnToken       - True: 반환 경로 중 CWB 폴더 부분을 {cPath} 토큰으로 역치환
+'          strCwbPath     - CWB 폴더 경로 (기본: 정규화한 ThisWorkbook.Path, 파일 경로 불가)
+' 반환   : String - 선택된 경로 (다중 선택 시 ";" 로 연결), 취소 시 ""
+' 예시   : GetPath()
+'          GetPath(msoFileDialogFolderPicker)
+'          Split(GetPath(blnMultiSelect:=True), ";")
+' 참고   : CWB 폴더 정규화를 위해 am_Path.NormalizeLocalPath 를 함께 호출 (1:1 래퍼 규칙의 예외)
+Public Function GetPath(Optional ByVal DilogType As MsoFileDialogType = msoFileDialogFilePicker, _
                         Optional ByVal strInitPath As String = "", _
                         Optional ByVal blnMultiSelect As Boolean = False, _
                         Optional ByVal strExtComment As String = "Select Item", _
                         Optional ByVal strFileName As String = "", _
                         Optional ByVal strExt As String = "*.*", _
                         Optional ByVal strCancelPath As String = "", _
-                        Optional ByVal blnToken As Boolean = True) As String
+                        Optional ByVal blnToken As Boolean = True, _
+                        Optional ByVal strCwbPath As String = "") As String
+    If strCwbPath = "" Then
+        strCwbPath = Application.Run("corelib.xlam!am_Path.NormalizeLocalPath", ThisWorkbook.Path)
+    End If
     GetPath = Application.Run(REF & "GetPath", _
-                              strCwbPath, DilogType, strInitPath, blnMultiSelect, _
-                              strExtComment, strFileName, strExt, strCancelPath, blnToken)
+                              DilogType, strInitPath, blnMultiSelect, strExtComment, _
+                              strFileName, strExt, strCancelPath, blnToken, strCwbPath)
 End Function
 
 ' ── 파일/폴더 존재 확인 ──────────────────────────────────────

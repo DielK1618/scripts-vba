@@ -48,9 +48,7 @@ End Sub
 
 Private Function Run(ByVal strPath As String) As String
     Run = Application.Run("corelib.xlam!am_Path.ReplacePath", _
-                          strPath, _
-                          ThisWorkbook.Path, _
-                          ThisWorkbook.FullName)
+                          strPath, False, True, False, ThisWorkbook.FullName)
 End Function
 
 Private Function RunGetRng(ByVal strFuncPath As String, _
@@ -204,6 +202,8 @@ Public Sub Test_Path()
     Call Test_NetworkPath
     Call Test_DriveMapping
     Call Test_EdgeCases
+    Call Test_CwbArgs
+    Call Test_CreateFolder
 End Sub
 
 Public Sub Test_FixedTokens()
@@ -230,7 +230,51 @@ End Sub
 
 Public Sub Test_NetworkPath()
     Debug.Print vbCrLf & "  [ 네트워크 경로 ]"
-    Call PrintResult("UNC 경로", "", Run("\\서버명\공유폴더"))
+
+    Const UNC_LOCAL As String = "\\localhost\C$"
+
+    Call PrintBool("없는 서버 UNC → 빈 문자열", Run("\\서버명\공유폴더") = "", True)
+
+    ' ── 실제 UNC (관리 공유 접근 가능한 경우만) ─────────────
+    Dim objFSO As Object
+    Set objFSO = CreateObject("Scripting.FileSystemObject")
+    If objFSO.FolderExists(UNC_LOCAL) Then
+        Call PrintResult("실제 UNC(존재) → 그대로 반환", _
+                         UNC_LOCAL & "\Windows", Run(UNC_LOCAL & "\Windows"))
+        Call PrintResult("실제 UNC(없는 하위 폴더) → 그대로 반환", _
+                         UNC_LOCAL & "\_corelib_no_folder", Run(UNC_LOCAL & "\_corelib_no_folder"))
+    Else
+        Debug.Print "--------------------------------------------"
+        Debug.Print "[실제 UNC] 건너뜀 — " & UNC_LOCAL & " 접근 불가 (관리 공유 권한 필요)"
+    End If
+    Set objFSO = Nothing
+
+    ' ── 네트워크 드라이브 매핑 (연결된 드라이브가 있는 경우만) ──
+    Dim objNet    As Object
+    Dim objDrives As Object
+    Dim strDrive  As String
+    Dim strUnc    As String
+    Dim i         As Long
+
+    Set objNet = CreateObject("WScript.Network")
+    Set objDrives = objNet.EnumNetworkDrives
+    For i = 0 To objDrives.Count - 1 Step 2
+        If objDrives.Item(i + 1) <> "" Then
+            strDrive = objDrives.Item(i)
+            strUnc = objDrives.Item(i + 1)
+            Exit For
+        End If
+    Next i
+
+    If strUnc <> "" Then
+        Call PrintResult("매핑된 UNC(" & strUnc & ") → 드라이브 문자", _
+                         strDrive & "\", Run(strUnc & "\"))
+    Else
+        Debug.Print "--------------------------------------------"
+        Debug.Print "[네트워크 드라이브 매핑] 건너뜀 — 연결된 네트워크 드라이브 없음"
+    End If
+    Set objDrives = Nothing
+    Set objNet = Nothing
 End Sub
 
 Public Sub Test_DriveMapping()
@@ -241,8 +285,49 @@ Public Sub Test_DriveMapping()
     Dim strOut As String
     strIn  = "Z:\" & Mid(ThisWorkbook.Path, 4)
     strOut = Application.Run("corelib.xlam!am_Path.ReplacePath", _
-                             strIn, ThisWorkbook.Path, ThisWorkbook.FullName, True)
+                             strIn, True, True, False, ThisWorkbook.FullName)
     Call PrintResult("드라이브 강제 교체", "", strOut)
+
+    ' ── 없는 드라이브 → CWB 드라이브로 대체 (CWB 를 C: 로 지정해 xlam 드라이브와 구분) ──
+    Dim objFSO     As Object
+    Dim strNoDrive As String
+    Dim i          As Long
+    Set objFSO = CreateObject("Scripting.FileSystemObject")
+    For i = Asc("Z") To Asc("D") Step -1
+        If Not objFSO.DriveExists(Chr(i)) Then
+            strNoDrive = Chr(i) & ":"
+            Exit For
+        End If
+    Next i
+    Set objFSO = Nothing
+
+    Call PrintResult("없는 드라이브(" & strNoDrive & ") → CWB 드라이브(C:)로 대체", "C:\_corelib_no_folder", _
+                     Application.Run("corelib.xlam!am_Path.ReplacePath", _
+                                     strNoDrive & "\_corelib_no_folder", False, True, False, "C:\cwb.xlsm"))
+End Sub
+
+Public Sub Test_CwbArgs()
+    Debug.Print vbCrLf & "  [ CWB 인수 ]"
+
+    Const RUN_REPLACE As String = "corelib.xlam!am_Path.ReplacePath"
+    Const RUN_NORMAL  As String = "corelib.xlam!am_Path.NormalizeLocalPath"
+
+    Dim strFile As String
+    Dim strPath As String
+
+    strFile = Application.Run(RUN_NORMAL, ThisWorkbook.FullName)
+    strPath = Application.Run(RUN_NORMAL, ThisWorkbook.Path)
+
+    Call PrintBool("NormalizeLocalPath(FullName) → 파일 존재", Dir(strFile) <> "", True)
+    Call PrintBool("NormalizeLocalPath(Path) → 폴더 존재", Dir(strPath, vbDirectory) <> "", True)
+    Call PrintBool("폴더 끝 \ 유무 → 동일 결과", _
+                   Application.Run(RUN_NORMAL, strPath & "\") = strPath, True)
+
+    Call PrintResult("루트 드라이브 CWB → {cPath} = C:", "C:\_x", _
+                     Application.Run(RUN_REPLACE, "{cPath}\_x", False, True, False, "C:\cwb.xlsm"))
+    Call PrintResult("슬래시 구분자 CWB → 폴더 파싱", "C:\Windows\_x", _
+                     Application.Run(RUN_REPLACE, "{cPath}\_x", False, True, False, "C:/Windows/cwb.xlsm"))
+    Call PrintResult("{cFile} → 정규화된 CWB 파일", strFile, Run("{cFile}"))
 End Sub
 
 Public Sub Test_EdgeCases()
@@ -250,7 +335,42 @@ Public Sub Test_EdgeCases()
     Call PrintBool("빈 문자열 → 빈 문자열 반환",   Run("") = "",                  True)
     Call PrintResult("토큰만",         "", Run("{cPath}"))
     Call PrintBool("잘못된 경로 → 빈 문자열 반환", Run("이건경로가아닙니다") = "", True)
-    Call PrintResult("토큰 연속 사용", "", Run("{cPath}{xPath}"))
+    Call PrintResult("토큰 + 하위 경로", _
+                     Application.Run("corelib.xlam!am_Path.NormalizeLocalPath", ThisWorkbook.Path) & "\_sub", _
+                     Run("{cPath}\_sub"))
+End Sub
+
+Public Sub Test_CreateFolder()
+    Debug.Print vbCrLf & "  [ 폴더 생성 (blnCreate) ]"
+
+    Const RUN_REPLACE As String = "corelib.xlam!am_Path.ReplacePath"
+
+    Dim strTmp As String
+    Dim strOut As String
+    strTmp = TestTmpPath()
+    Application.Run "corelib.xlam!am_File.DelFolder", strTmp
+
+    ' ── 기본값(False) → 경로만 반환, 생성 안 함 ─────────────
+    strOut = Run("{cPath}\_test_tmp\a\")
+    Call PrintResult("blnCreate 생략 → 경로만 반환", strTmp & "\a\", strOut)
+    Call PrintBool("blnCreate 생략 → 폴더 미생성", Dir(strTmp, vbDirectory) = "", True)
+
+    ' ── 끝 "\" → 경로 전체를 폴더로 생성 ─────────────────────
+    strOut = Application.Run(RUN_REPLACE, "{cPath}\_test_tmp\a\b\", False, True, True, ThisWorkbook.FullName)
+    Call PrintResult("끝 \ → 반환 경로", strTmp & "\a\b\", strOut)
+    Call PrintBool("끝 \ → 중첩 폴더 생성", Dir(strTmp & "\a\b", vbDirectory) <> "", True)
+
+    ' ── 파일 경로 → 부모 폴더만 생성 ─────────────────────────
+    strOut = Application.Run(RUN_REPLACE, "{cPath}\_test_tmp\c\report.pdf", False, True, True, ThisWorkbook.FullName)
+    Call PrintResult("파일 경로 → 반환 경로", strTmp & "\c\report.pdf", strOut)
+    Call PrintBool("파일 경로 → 부모 폴더 생성", Dir(strTmp & "\c", vbDirectory) <> "", True)
+    Call PrintBool("파일 경로 → 파일명 폴더 미생성", Dir(strTmp & "\c\report.pdf", vbDirectory) = "", True)
+
+    ' ── 없는 서버 UNC → 생성 시도 없이 빈 문자열 ─────────────
+    Call PrintBool("없는 서버 UNC + blnCreate → 빈 문자열", _
+                   Application.Run(RUN_REPLACE, "\\서버명\공유폴더\new\", False, True, True, ThisWorkbook.FullName) = "", True)
+
+    Application.Run "corelib.xlam!am_File.DelFolder", strTmp
 End Sub
 
 ' ══════════════════════════════════════════════════════════

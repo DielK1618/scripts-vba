@@ -59,6 +59,28 @@ CWB(Client WorkBook)에서 `Workbooks.Open` 방식으로 xlam을 로드하고
 
 ## 다음 작업
 
+### CWB 인수 정리 반영 상태 (2026-09-15)
+
+- ✅ 소스 수정 완료 — am_Path · am_File · ref_Path · ref_File · tpl_Path · tpl_Test, CLAUDE.md · 매뉴얼 · LOG.md
+- ✅ 교체 임포트 · `tpl_Test.Test_Path` 실행 — 전 항목 OK (2026-09-15 사용자 실행)
+  - ⚠️ `UNC 경로` 결과 `H:\\서버명\공유폴더` — 판정은 OK(비어있지 않음)지만 실제로는 오동작
+- ✅ 2차 소스 수정 — UNC 드라이브 제외·공유 루트 판정, 대체 드라이브 CWB 기준, `blnCreate` 신규, 테스트 강화
+- ✅ 2차 반영 · `Test_Path` 전 항목 OK (2026-09-15 사용자 실행)
+  - 실제 UNC(`\\localhost\C$`) · 매핑 드라이브(H: = `\\172.17.107.251\wf10084`) 항목 모두 실행되어 통과
+  - 테스트 CWB 는 네트워크 드라이브(H:) 위치 — 실사용 환경과 동일 조건에서 검증됨
+- ✅ `TROUBLESHOOTING.md` TS-V18 기록 (UNC 드라이브 부착 버그)
+- ✅ `Test_DriveMapping` 신규 케이스 "없는 드라이브(Z:) → CWB 드라이브(C:)로 대체" OK (2026-09-15 사용자 실행) — 대체 기준 xlam → CWB 변경 검증 완료
+- ⚠️ `GetPath()` 수동 확인 → `{cpath}\vba program template.xlsm` (소문자화) — 기존 LCase 역치환 블록 미삭제가 원인, 소스 수정 완료
+- ✅ `am_File.bas` 재임포트 후 `GetPath()` 재확인 — `{cPath}\VBA PROGRAM Template.xlsm` 원본 대소문자 반환 확인 (2026-09-15 사용자 실행)
+- ✅ 네트워크 드라이브 위치 CWB 에서 `ReplacePath` 검증 — 테스트 CWB 자체가 H:(네트워크 드라이브)
+- ⬜ `GetPath` 나머지 수동 확인: 다중 선택(`;` 연결·항목별 치환), CWB 밖 경로 선택 시 토큰 미치환, 폴더 선택 모드
+- ⬜ 기존 배포 CWB 의 구 시그니처 호출부 확인 — 구 호출은 타입 불일치 오류로 중단됨
+  - `ReplacePath(p, ThisWorkbook.Path, ThisWorkbook.FullName)` → `ReplacePath(p)`
+  - `GetPath(ThisWorkbook.Path, ...)` → `GetPath(...)`
+  - `ResolvePath(p)` (tpl_Path 삭제) → `ReplacePath(p)`
+
+**이 섹션 바로 다음 작업: `GetPath` 나머지 수동 확인 → 기존 CWB 구 시그니처 호출부 정리**
+
 ### am_Automation 반영 상태 (2026-07-24 기준)
 
 - ✅ `am_Automation.bas` corelib.xlam VBE 임포트 완료 (사용자 확인)
@@ -176,6 +198,7 @@ Test_Core → Test_Path → Test_File → Test_Utils
 - **모듈 간 직접 호출 금지** → 필요하면 `prv_` 로 내부 구현
 - **Late Binding** → `CreateObject(...)` 사용, 참조 추가 안 함
 - **Optional 인수** → 반드시 필수 인수 뒤에 위치
+- **CWB 인수** → 필요한 정보별 1개(`strCwbPath` 또는 `strCwbFile`), 맨 끝 Optional, ref_ 래퍼가 자동 입력 (CLAUDE.md §6)
 - **색상 센티널** → `-1` (0은 검정으로 유효값)
 - **배열 인덱스** → 항상 `LBound` / `UBound`
 - **에러 패턴** → `On Error GoTo ErrHandler` + `MsgBox ... am_Core.AM_NAME`
