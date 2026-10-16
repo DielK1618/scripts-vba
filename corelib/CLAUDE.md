@@ -39,6 +39,8 @@ corelib/
 │   ├── am_DB.bas
 │   ├── am_Excel.bas
 │   ├── am_Automation.bas
+│   ├── am_Inspect.bas         ← 외부 프로그램 UI 요소 인식 (2026-10-16 추가)
+│   ├── am_Credential.bas      ← 로그인 정보 입력 창·자격 증명 관리자 (2026-10-16 추가)
 │   ├── am_Utils.bas           ← 미작성
 │   └── am_Error.bas           ← 미작성
 │
@@ -50,6 +52,8 @@ corelib/
     ├── ref_DB.bas             ← am_DB 래퍼 (기본 포함)
     ├── ref_Excel.bas          ← am_Excel 래퍼 (기본 포함)
     ├── ref_Automation.bas     ← am_Automation 래퍼 (기본 포함)
+    ├── ref_Inspect.bas        ← am_Inspect 래퍼 (기본 포함)
+    ├── ref_Credential.bas     ← am_Credential 래퍼 (기본 포함)
     ├── ref_Range.bas          ← am_Range 래퍼 (기본 포함)
     ├── ref_Sheet.bas          ← am_Sheet 래퍼 (기본 포함)
     ├── ref_Table.bas          ← am_Table 래퍼 (기본 포함)
@@ -57,7 +61,8 @@ corelib/
     ├── ref_Utils.bas          ← am_Utils 래퍼 (기본 포함)
     ├── ref_Error.bas          ← am_Error 래퍼 (기본 포함)
     ├── tpl_Path.bas           ← 경로 관련 CWB 유틸리티 (필요시)
-    └── tpl_Test.bas           ← 테스트 프로시저 (필요시)
+    ├── tpl_Test.bas           ← 테스트 프로시저 (필요시)
+    └── tpl_Messenger.bas      ← WMC Messenger 자동화 (필요시, 2026-10-16 추가)
 ```
 
 ### 파일 규칙
@@ -81,6 +86,8 @@ corelib/
 | `am_DB` | `am_DB.bas` | DB 연결, 쿼리 실행, 스키마 조회, 타입 처리 |
 | `am_Excel` | `am_Excel.bas` | 인쇄/내보내기, 차트, 도형 등 Excel 객체 모델 자동화 |
 | `am_Automation` | `am_Automation.bas` | 키보드/마우스 입력 시뮬레이션, 창 탐색/활성화/버튼 제어 (Windows API, Excel 비종속) |
+| `am_Credential` | `am_Credential.bas` | 로그인 정보 입력 창(비밀번호 가림), Windows 자격 증명 관리자 저장·읽기·삭제 (Windows API, 참조 불필요) (2026-10-16 추가) |
+| `am_Inspect` | `am_Inspect.bas` | 외부 프로그램 UI 요소 인식 — 창 목록, 요소 트리, 커서 위치 요소 조회 (UI Automation, 조회 전용·제어는 am_Automation) (2026-10-16 추가) |
 | `am_Utils` | `am_Utils.bas` | 문자열, 배열, 날짜 등 순수 범용 유틸리티 |
 | `am_Error` | `am_Error.bas` | 공통 에러 핸들링 |
 
@@ -96,6 +103,8 @@ corelib/
 | `ref_DB` | `ref_DB.bas` | `am_DB` |
 | `ref_Excel` | `ref_Excel.bas` | `am_Excel` |
 | `ref_Automation` | `ref_Automation.bas` | `am_Automation` |
+| `ref_Inspect` | `ref_Inspect.bas` | `am_Inspect` |
+| `ref_Credential` | `ref_Credential.bas` | `am_Credential` |
 | `ref_Range` | `ref_Range.bas` | `am_Range` |
 | `ref_Sheet` | `ref_Sheet.bas` | `am_Sheet` |
 | `ref_Table` | `ref_Table.bas` | `am_Table` |
@@ -110,6 +119,7 @@ corelib/
 | `ThisWorkbook` | `현재_통합_문서.cls` | xlam 로드, 이벤트 처리 |
 | `tpl_Path` | `tpl_Path.bas` | 경로 관련 CWB 유틸리티 |
 | `tpl_Test` | `tpl_Test.bas` | 테스트 프로시저 모음 |
+| `tpl_Messenger` | `tpl_Messenger.bas` | WMC Messenger 실행·로그인·그룹 우클릭 메뉴 (2026-10-16 추가, 사용법은 모듈 상단 주석) |
 
 #### ref_ 래퍼 규칙
 
@@ -238,6 +248,25 @@ Option Explicit
 ' └─────────────────────────────────────────────────────────┘
 ```
 
+### 버전 줄 (2026-10-16 확정)
+
+- 모든 모듈(`am_`·`ref_`·`tpl_`·ThisWorkbook)의 `Option Explicit` 바로 다음 줄에 버전을 적는다
+- 형식: `' 버전 : YYYY-MM-DD HH:mm · 변경 요약` (KST, 변경 요약은 한 줄로 짧게 — 이력은 LOG 에)
+- 모듈 내용을 고치면 고친 시각으로 버전 줄을 갱신하고, `INDEX.md` "모듈 버전" 표의 같은 행도 갱신한다 (모든 모델 공통)
+- 목적: 사용자가 VBE 에 붙여 넣은 모듈이 최신인지 3번째 줄과 표만 보고 확인
+
+```vba
+Attribute VB_Name = "am_Inspect"
+Option Explicit
+' 버전 : 2026-10-16 16:40 · 커서 조회 수정
+```
+
+### VBE 에서 깨지는 문자 (2026-10-16 확인)
+
+- VBE 는 한글 Windows 에서 CP949 로 코드를 다룬다. CP949 에 없는 문자는 붙여 넣거나 가져올 때 `?` 로 바뀐다
+- 실행 문자열(MsgBox·Debug.Print 등)과 버전 줄에는 쓰지 않는다: `—`(긴 줄표, U+2014) → `-` 사용
+- 기존 구분자 `═`(U+2550)도 VBE 에서는 `?` 로 보이지만 주석이라 동작에는 영향 없음
+
 ### 프로시저 헤더 주석
 
 ```vba
@@ -355,6 +384,7 @@ Set dicData = CreateObject("Scripting.Dictionary")
 - **예외**: `am_Automation.ClickButtonByUIA` (UI Automation) — `CreateObject("UIAutomationClient.CUIAutomation")`가
   이 개발 환경(Excel 2010 32bit)에서 런타임 429 오류로 실패 확인됨(`TROUBLESHOOTING.md` TS-V16).
   Early Binding(`New CUIAutomation`)만 정상 동작 → VBE 참조에 **UIAutomationClient** 라이브러리 추가 필요
+- **예외**: `am_Automation.SelectItemByUIA` / `ExpandItemByUIA` / `ClickContextMenuByUIA` / `OpenAppWindow` / `WaitElementByUIA` / `SetValueByUIA` / `InvokeByUIA` (2026-10-16), `am_Inspect` 모듈 전체 — 같은 이유로 Early Binding (2026-10-16). 참조는 corelib.xlam 에만 필요하고 CWB(`ref_Inspect`)에는 불필요
 
 ### 배열 인덱스
 
@@ -487,7 +517,7 @@ Public Const DB_TYPE_ACCESS As String = "엑세스"
 
 ## 11. 개발 환경
 
-- Excel 2010 32-bit
+- Excel 2010 32-bit (Windows 는 64-bit — `Application.OperatingSystem` = `Windows (32-bit) NT 6.02`, 2026-10-16 회사 PC 확인)
 - Microsoft ADO Ext. 2.8
 - Microsoft ActiveX Data Objects 2.8 Library
 - Late Binding 방식 (라이브러리 참조 없이 동작)

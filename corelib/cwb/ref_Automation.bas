@@ -1,5 +1,6 @@
 Attribute VB_Name = "ref_Automation"
 Option Explicit
+' 버전 : 2026-10-16 16:32 · am_Automation 신규 함수 래퍼 추가
 
 ' ┌─────────────────────────────────────────────────────────┐
 ' │  ref_Automation                                          │
@@ -119,10 +120,116 @@ Public Function ForceActivateWindow(ByVal strWindowTitle As String) As Boolean
     ForceActivateWindow = Application.Run(REF & "ForceActivateWindow", strWindowTitle)
 End Function
 
-' 목적   : UI Automation(Late Binding)으로 창 안의 버튼을 이름으로 찾아 Invoke
+' 목적   : UI Automation 으로 창 안의 버튼을 이름으로 찾아 Invoke
 ' 인수   : strWindowName - 대상 창 이름 (UIA Name 속성 기준)
 '          strButtonName - 찾을 버튼 이름 (UIA Name 속성 기준)
 ' 반환   : Boolean - Invoke 성공 여부
 Public Function ClickButtonByUIA(ByVal strWindowName As String, ByVal strButtonName As String) As Boolean
     ClickButtonByUIA = Application.Run(REF & "ClickButtonByUIA", strWindowName, strButtonName)
+End Function
+
+' 목적   : UI Automation 으로 창 안의 항목(트리·목록·탭 항목 등)을 이름으로 찾아 선택
+' 인수   : strWindowName - 대상 창 이름 (부분 일치)
+'          strItemName   - 항목 이름 (앞뒤 공백 무시 앞부분 일치 / * ? 포함 시 Like 패턴)
+'          blnExpand     - 선택 후 하위 항목 펼치기 (기본 False)
+'          strType       - 종류 제한 (예: "TreeItem" / 생략 시 전체)
+' 반환   : Boolean - 찾아서 선택했는지 여부
+' 예시   : SelectItemByUIA("WMC Messenger", "Target", True, "TreeItem")
+Public Function SelectItemByUIA(ByVal strWindowName As String, _
+                                ByVal strItemName As String, _
+                                Optional ByVal blnExpand As Boolean = False, _
+                                Optional ByVal strType As String = "") As Boolean
+    SelectItemByUIA = Application.Run(REF & "SelectItemByUIA", strWindowName, strItemName, blnExpand, strType)
+End Function
+
+' 목적   : UI Automation 으로 창 안의 항목을 이름으로 찾아 펼치거나 접음
+' 인수   : strWindowName - 대상 창 이름 (부분 일치)
+'          strItemName   - 항목 이름 (SelectItemByUIA 와 같은 일치 규칙)
+'          blnExpand     - True=펼치기, False=접기 (기본 True)
+'          strType       - 종류 제한 (생략 시 전체)
+' 반환   : Boolean - 찾아서 펼치기/접기를 실행했는지 여부
+' 예시   : ExpandItemByUIA("WMC Messenger", "Target")
+Public Function ExpandItemByUIA(ByVal strWindowName As String, _
+                                ByVal strItemName As String, _
+                                Optional ByVal blnExpand As Boolean = True, _
+                                Optional ByVal strType As String = "") As Boolean
+    ExpandItemByUIA = Application.Run(REF & "ExpandItemByUIA", strWindowName, strItemName, blnExpand, strType)
+End Function
+
+' 목적   : 항목을 찾아 선택한 뒤 우클릭 메뉴를 열고, 메뉴 항목을 이름으로 찾아 실행
+' 인수   : strWindowName - 대상 창 이름 (부분 일치)
+'          strItemName   - 우클릭할 항목 이름 (SelectItemByUIA 와 같은 일치 규칙)
+'          strMenuName   - 실행할 메뉴 이름 (예: "친구추가")
+'          strType       - 항목 종류 제한 (예: "TreeItem" / 생략 시 전체)
+'          blnAllowMouse - 메시지로 메뉴가 안 열리면 실제 마우스 우클릭 허용 (기본 True)
+' 반환   : Boolean - 메뉴 항목을 실행했는지 여부 (실패 단계는 직접 실행 창에 출력)
+' 예시   : ClickContextMenuByUIA("WMC Messenger", "Target", "친구추가", "TreeItem")
+Public Function ClickContextMenuByUIA(ByVal strWindowName As String, _
+                                      ByVal strItemName As String, _
+                                      ByVal strMenuName As String, _
+                                      Optional ByVal strType As String = "", _
+                                      Optional ByVal blnAllowMouse As Boolean = True) As Boolean
+    ClickContextMenuByUIA = Application.Run(REF & "ClickContextMenuByUIA", strWindowName, strItemName, strMenuName, strType, blnAllowMouse)
+End Function
+
+' 목적   : 프로그램 창이 있으면 앞으로 가져오고, 없으면 실행한 뒤 창(과 준비 항목)이 나타날 때까지 대기
+' 인수   : strWindowName - 창 이름 (부분 일치)
+'          strExePath    - 실행 파일 전체 경로 (창이 없을 때만 실행 / DumpWindows 의 '실행 파일 경로' 열 참고)
+'          strReadyItem  - 준비 완료로 볼 항목 이름 (예: "Target" / 생략 시 창만 확인)
+'          lngTimeoutSec - 최대 대기 시간(초, 기본 60)
+'          strArgs       - 실행 인수 (생략 가능)
+' 반환   : Boolean - 창이 준비되었는지 여부 (실패 단계는 직접 실행 창에 출력)
+' 예시   : OpenAppWindow("WMC Messenger", "C:\Program Files\WMC\WMC_Msg.exe", "Target")
+Public Function OpenAppWindow(ByVal strWindowName As String, _
+                              ByVal strExePath As String, _
+                              Optional ByVal strReadyItem As String = "", _
+                              Optional ByVal lngTimeoutSec As Long = 60, _
+                              Optional ByVal strArgs As String = "") As Boolean
+    OpenAppWindow = Application.Run(REF & "OpenAppWindow", strWindowName, strExePath, strReadyItem, lngTimeoutSec, strArgs)
+End Function
+
+' 목적   : 창이 화면에 열려 있는지 확인 (숨겨진 창은 False)
+' 인수   : strWindowName - 창 이름 (부분 일치 / "=이름" 완전 일치 / "A|B" 여러 이름 중 하나)
+' 반환   : Boolean
+' 예시   : IsWindowOpen("=Login")
+Public Function IsWindowOpen(ByVal strWindowName As String) As Boolean
+    IsWindowOpen = Application.Run(REF & "IsWindowOpen", strWindowName)
+End Function
+
+' 목적   : 창 안의 요소(항목·버튼·입력칸 등)가 나타날 때까지 대기
+' 인수   : strWindowName - 창 이름 (IsWindowOpen 과 같은 규칙)
+'          strElement    - 요소 이름 (앞부분 일치 / * ? Like 패턴 / "#아이디" AutomationId)
+'          lngTimeoutSec - 최대 대기 시간(초, 기본 30)
+' 반환   : Boolean - 시간 안에 나타났는지 여부
+' 예시   : WaitElementByUIA("WMC Messenger", "Target", 60)
+Public Function WaitElementByUIA(ByVal strWindowName As String, _
+                                 ByVal strElement As String, _
+                                 Optional ByVal lngTimeoutSec As Long = 30) As Boolean
+    WaitElementByUIA = Application.Run(REF & "WaitElementByUIA", strWindowName, strElement, lngTimeoutSec)
+End Function
+
+' 목적   : 입력칸에 값을 넣음 (UI Automation 값 입력 우선, 안 되면 키보드 입력)
+' 인수   : strWindowName    - 창 이름 (IsWindowOpen 과 같은 규칙)
+'          strElement       - 입력칸 (이름 앞부분 일치 / "#아이디" AutomationId - 예: "#teUserID")
+'          strValue         - 넣을 값
+'          blnAllowKeyboard - 값 입력이 안 되면 키보드 입력으로 대체 (기본 True)
+' 반환   : Boolean - 값을 넣었는지 여부
+' 예시   : SetValueByUIA("=Login", "#teUserID", "hong")
+Public Function SetValueByUIA(ByVal strWindowName As String, _
+                              ByVal strElement As String, _
+                              ByVal strValue As String, _
+                              Optional ByVal blnAllowKeyboard As Boolean = True) As Boolean
+    SetValueByUIA = Application.Run(REF & "SetValueByUIA", strWindowName, strElement, strValue, blnAllowKeyboard)
+End Function
+
+' 목적   : 버튼 등 요소를 이름 또는 AutomationId 로 찾아 실행(Invoke)
+' 인수   : strWindowName - 창 이름 (IsWindowOpen 과 같은 규칙)
+'          strElement    - 요소 (이름 앞부분 일치 / "#아이디" AutomationId - 예: "#btnLogIn")
+'          strType       - 종류 제한 (예: "Button" / 생략 시 전체)
+' 반환   : Boolean - 실행했는지 여부
+' 예시   : InvokeByUIA("=Login", "#btnLogIn")
+Public Function InvokeByUIA(ByVal strWindowName As String, _
+                            ByVal strElement As String, _
+                            Optional ByVal strType As String = "") As Boolean
+    InvokeByUIA = Application.Run(REF & "InvokeByUIA", strWindowName, strElement, strType)
 End Function

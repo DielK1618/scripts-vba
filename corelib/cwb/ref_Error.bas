@@ -1,5 +1,6 @@
 Attribute VB_Name = "ref_Error"
 Option Explicit
+' 버전 : 2026-06-16 14:10
 
 ' ┌─────────────────────────────────────────────────────────┐
 ' │  ref_Error                                              │

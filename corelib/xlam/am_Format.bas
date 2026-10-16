@@ -1,5 +1,6 @@
 Attribute VB_Name = "am_Format"
 Option Explicit
+' 버전 : 2026-06-02 15:10
 
 ' ┌─────────────────────────────────────────────────────────┐
 ' │  am_Format                                              │

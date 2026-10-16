@@ -1,5 +1,6 @@
 Attribute VB_Name = "ref_Excel"
 Option Explicit
+' 버전 : 2026-07-24 15:46
 
 ' ┌─────────────────────────────────────────────────────────┐
 ' │  ref_Excel                                              │

@@ -1,5 +1,6 @@
 Attribute VB_Name = "ref_Sheet"
 Option Explicit
+' 버전 : 2026-06-16 16:46
 
 ' ┌─────────────────────────────────────────────────────────┐
 ' │  ref_Sheet                                              │

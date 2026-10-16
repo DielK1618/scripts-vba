@@ -33,7 +33,9 @@ corelib.xlam 본체를 구성하는 모듈이다. `am_` 접두사를 쓴다.
 | `am_Table` | `xlam/am_Table.bas` | 테이블(ListObject) CRUD·필터·정렬·검색 |
 | `am_Format` | `xlam/am_Format.bas` | 조건부 서식, 유효성 검사 |
 | `am_Excel` | `xlam/am_Excel.bas` | 인쇄/내보내기, 차트, 도형 등 Excel 객체 모델 자동화 |
-| `am_Automation` | `xlam/am_Automation.bas` | 키보드/마우스 입력 시뮬레이션, 창 탐색·활성화·버튼 제어(Win32 API, Excel 비종속) |
+| `am_Automation` | `xlam/am_Automation.bas` | 키보드/마우스 입력 시뮬레이션, 창 탐색·활성화·버튼 제어(Win32 API, Excel 비종속), UI Automation 항목 선택·펼치기·우클릭 메뉴 실행(`SelectItemByUIA`/`ExpandItemByUIA`/`ClickContextMenuByUIA`), 프로그램 실행·창 준비 대기(`OpenAppWindow`/`IsWindowOpen`/`WaitElementByUIA`), 입력칸 값 입력·버튼 실행(`SetValueByUIA`/`InvokeByUIA`) |
+| `am_Credential` | `xlam/am_Credential.bas` | 로그인 정보 입력 창(`PromptCredential`), 자격 증명 관리자(`SaveCredential`/`ReadCredential`/`HasCredential`/`DeleteCredential`) |
+| `am_Inspect` | `xlam/am_Inspect.bas` | 외부 프로그램 UI 요소 인식 — 창 목록(`ListWindows`/`DumpWindows`), 요소 트리(`GetElementTree`/`DumpElementTree`), 커서 위치 요소(`GetElementAtCursor`/`DumpElementAtCursor`) |
 | `am_Utils` | `xlam/am_Utils.bas` | 배열·검사·코드생성·날짜·외부앱·수식 등 범용 유틸리티 |
 | `am_Error` | `xlam/am_Error.bas` | 공통 에러 핸들링, 로그 기록 |
 
@@ -57,6 +59,8 @@ cwb_01.xlsm(클라이언트 워크북) 쪽 모듈이다. xlam을 소비하는 �
 | `ref_Format` | `cwb/ref_Format.bas` | `am_Format` |
 | `ref_Excel` | `cwb/ref_Excel.bas` | `am_Excel` |
 | `ref_Automation` | `cwb/ref_Automation.bas` | `am_Automation` |
+| `ref_Inspect` | `cwb/ref_Inspect.bas` | `am_Inspect` |
+| `ref_Credential` | `cwb/ref_Credential.bas` | `am_Credential` |
 | `ref_Utils` | `cwb/ref_Utils.bas` | `am_Utils` |
 | `ref_Error` | `cwb/ref_Error.bas` | `am_Error` |
 
@@ -67,6 +71,50 @@ cwb_01.xlsm(클라이언트 워크북) 쪽 모듈이다. xlam을 소비하는 �
 | `ThisWorkbook` | `cwb/현재_통합_문서.cls` | xlam 로드, 이벤트 처리 |
 | `tpl_Path` | `cwb/tpl_Path.bas` | 경로 관련 CWB 전용 유틸리티 |
 | `tpl_Test` | `cwb/tpl_Test.bas` | 전 am_ 모듈 자동화 테스트 프로시저 모음 |
+| `tpl_Messenger` | `cwb/tpl_Messenger.bas` | WMC Messenger 실행·로그인·그룹 우클릭 메뉴 (`WmcOpen`/`WmcAddFriend`/`WmcRunGroupMenu`) |
+
+---
+
+## 모듈 버전 (2026-10-16 도입)
+
+각 모듈 `Option Explicit` 바로 아래 `' 버전 : YYYY-MM-DD HH:mm · 변경 요약` 줄과 이 표가 같으면 최신이다.
+VBE 에 붙여 넣은 모듈의 3번째 줄(ThisWorkbook 은 `Option Explicit` 다음 줄)을 이 표와 비교한다. 규칙은 [`CLAUDE.md`](CLAUDE.md) §5 "버전 줄".
+
+| 모듈 | 파일 경로 | 버전 | 마지막 변경 |
+|---|---|---|---|
+| `am_Automation` | `xlam/am_Automation.bas` | 2026-10-16 16:32 | UIA 항목 선택·우클릭 메뉴·프로그램 실행·입력칸/버튼 함수 추가 |
+| `am_Core` | `xlam/am_Core.bas` | 2026-06-16 16:54 |  |
+| `am_Credential` | `xlam/am_Credential.bas` | 2026-10-16 16:32 | 신규 - 로그인 정보 입력 창·자격 증명 관리자 |
+| `am_DB` | `xlam/am_DB.bas` | 2026-06-16 14:40 |  |
+| `am_Error` | `xlam/am_Error.bas` | 2026-06-11 10:51 |  |
+| `am_Excel` | `xlam/am_Excel.bas` | 2026-07-24 15:46 |  |
+| `am_File` | `xlam/am_File.bas` | 2026-09-15 14:00 |  |
+| `am_Format` | `xlam/am_Format.bas` | 2026-06-02 15:10 |  |
+| `am_Inspect` | `xlam/am_Inspect.bas` | 2026-10-16 16:32 | 신규 - 외부 프로그램 창·요소 인식 |
+| `am_Path` | `xlam/am_Path.bas` | 2026-09-15 14:00 |  |
+| `am_Range` | `xlam/am_Range.bas` | 2026-06-16 14:10 |  |
+| `am_Sheet` | `xlam/am_Sheet.bas` | 2026-06-16 16:54 |  |
+| `am_Table` | `xlam/am_Table.bas` | 2026-06-16 14:40 |  |
+| `am_Utils` | `xlam/am_Utils.bas` | 2026-06-05 17:40 |  |
+| `현재_통합_문서` | `xlam/현재_통합_문서.cls` | 2026-06-02 15:10 |  |
+| `ref_Automation` | `cwb/ref_Automation.bas` | 2026-10-16 16:32 | am_Automation 신규 함수 래퍼 추가 |
+| `ref_Core` | `cwb/ref_Core.bas` | 2026-06-16 16:46 |  |
+| `ref_Credential` | `cwb/ref_Credential.bas` | 2026-10-16 16:32 | 신규 - am_Credential 래퍼 |
+| `ref_DB` | `cwb/ref_DB.bas` | 2026-06-16 14:40 |  |
+| `ref_Error` | `cwb/ref_Error.bas` | 2026-06-16 14:10 |  |
+| `ref_Excel` | `cwb/ref_Excel.bas` | 2026-07-24 15:46 |  |
+| `ref_File` | `cwb/ref_File.bas` | 2026-09-15 14:00 |  |
+| `ref_Format` | `cwb/ref_Format.bas` | 2026-06-16 14:10 |  |
+| `ref_Inspect` | `cwb/ref_Inspect.bas` | 2026-10-16 16:32 | 신규 - am_Inspect 래퍼 |
+| `ref_Path` | `cwb/ref_Path.bas` | 2026-09-15 14:00 |  |
+| `ref_Range` | `cwb/ref_Range.bas` | 2026-06-16 14:10 |  |
+| `ref_Sheet` | `cwb/ref_Sheet.bas` | 2026-06-16 16:46 |  |
+| `ref_Table` | `cwb/ref_Table.bas` | 2026-06-16 14:40 |  |
+| `ref_Utils` | `cwb/ref_Utils.bas` | 2026-06-16 14:10 |  |
+| `tpl_Messenger` | `cwb/tpl_Messenger.bas` | 2026-10-16 16:32 | 신규 - WMC Messenger 자동화 |
+| `tpl_Path` | `cwb/tpl_Path.bas` | 2026-09-15 14:00 |  |
+| `tpl_Test` | `cwb/tpl_Test.bas` | 2026-09-15 14:00 |  |
+| `현재_통합_문서` | `cwb/현재_통합_문서.cls` | 2026-06-02 15:10 |  |
 
 ---
 

@@ -8,6 +8,7 @@ Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
 Attribute VB_Exposed = True
 Option Explicit
+' 버전 : 2026-06-02 15:10
 
 ' ── 1. xlam 열림 이벤트 ─────────────────────────────────────
 Private Sub Workbook_Open()
